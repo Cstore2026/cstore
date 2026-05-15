@@ -1151,6 +1151,140 @@ const state = {
 const KPI_PREPARERS_MONTH = '';
 const KPI_PREPARERS_ROWS = [];
 
+// ===== Supabase Online Sync - V6 =====
+const SUPABASE_URL = 'https://lqcvrhlbxurdlnmlpjyr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxY3ZyaGxieHVyZGxubWxwanlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDY4NzMsImV4cCI6MjA5NDQyMjg3M30.fRWKuAfRn0wbCPeluFrqBpLRUKhDmy6iJxG9rZNvsf4';
+const CLOUD_TABLE = 'dashboard_store';
+const CLOUD_STATE_ID = 'app_state';
+const CLOUD_ENABLED = true;
+let cloudLoadedOnce = false;
+let cloudSaving = false;
+let cloudSaveTimer = null;
+let lastCloudUpdatedAt = '';
+let suppressCloudSave = false;
+
+function cloudHeaders(extra={}){
+  return {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+    'Content-Type': 'application/json',
+    ...extra
+  };
+}
+
+function getCloudPayload(){
+  return {
+    version: 'v6_supabase_sync',
+    orders: state.orders || [],
+    settings: state.settings || {},
+    kpi: state.kpi || {},
+    updatedBy: state.sessionRole || 'system',
+    savedAt: new Date().toISOString()
+  };
+}
+
+function applyCloudPayload(payload){
+  if(!payload || typeof payload !== 'object') return;
+  suppressCloudSave = true;
+  try{
+    if(Array.isArray(payload.orders)) state.orders = payload.orders;
+    if(payload.settings && typeof payload.settings === 'object'){
+      state.settings = {...state.settings, ...payload.settings};
+    }
+    if(payload.kpi && typeof payload.kpi === 'object'){
+      state.kpi = {...state.kpi, ...payload.kpi};
+    }
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state.settings)); }catch(e){}
+    try{ localStorage.setItem(KPI_STORE_KEY, JSON.stringify(state.kpi || {})); }catch(e){}
+  } finally {
+    suppressCloudSave = false;
+  }
+}
+
+async function loadCloudState(showMessage=false){
+  if(!CLOUD_ENABLED) return false;
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/${CLOUD_TABLE}?id=eq.${encodeURIComponent(CLOUD_STATE_ID)}&select=data,updated_at`;
+    const res = await fetch(url, {headers: cloudHeaders()});
+    if(!res.ok) throw new Error('Supabase load error: ' + res.status);
+    const rows = await res.json();
+    if(rows && rows[0] && rows[0].data){
+      applyCloudPayload(rows[0].data);
+      lastCloudUpdatedAt = rows[0].updated_at || '';
+      cloudLoadedOnce = true;
+      if(showMessage && document.getElementById('msg')){
+        document.getElementById('msg').textContent = 'تم تحديث البيانات من قاعدة البيانات أونلاين.';
+      }
+      return true;
+    }
+    cloudLoadedOnce = true;
+    return false;
+  }catch(err){
+    console.warn(err);
+    if(showMessage && document.getElementById('msg')){
+      document.getElementById('msg').textContent = 'تعذر تحميل البيانات أونلاين، سيتم استخدام بيانات الجهاز مؤقتًا.';
+    }
+    return false;
+  }
+}
+
+async function saveCloudState(showMessage=false){
+  if(!CLOUD_ENABLED || suppressCloudSave) return false;
+  try{
+    cloudSaving = true;
+    const body = JSON.stringify({
+      id: CLOUD_STATE_ID,
+      data: getCloudPayload(),
+      updated_at: new Date().toISOString()
+    });
+    const url = `${SUPABASE_URL}/rest/v1/${CLOUD_TABLE}?on_conflict=id`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: cloudHeaders({'Prefer':'resolution=merge-duplicates,return=representation'}),
+      body
+    });
+    if(!res.ok) throw new Error('Supabase save error: ' + res.status + ' ' + await res.text());
+    const rows = await res.json().catch(()=>[]);
+    if(rows && rows[0] && rows[0].updated_at) lastCloudUpdatedAt = rows[0].updated_at;
+    if(showMessage && document.getElementById('msg')){
+      document.getElementById('msg').textContent = 'تم حفظ البيانات أونلاين ومشاركتها مع كل الأجهزة.';
+    }
+    return true;
+  }catch(err){
+    console.warn(err);
+    if(showMessage && document.getElementById('msg')){
+      document.getElementById('msg').textContent = 'لم يتم الحفظ أونلاين. راجع اتصال الإنترنت أو إعدادات Supabase.';
+    }
+    return false;
+  }finally{
+    cloudSaving = false;
+  }
+}
+
+function saveCloudStateDebounced(){
+  if(!CLOUD_ENABLED || suppressCloudSave) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(()=>{ saveCloudState(false); }, 900);
+}
+
+async function refreshCloudIfChanged(){
+  if(!CLOUD_ENABLED || cloudSaving || state.sessionRole === 'admin') return;
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/${CLOUD_TABLE}?id=eq.${encodeURIComponent(CLOUD_STATE_ID)}&select=data,updated_at`;
+    const res = await fetch(url, {headers: cloudHeaders()});
+    if(!res.ok) return;
+    const rows = await res.json();
+    if(rows && rows[0] && rows[0].updated_at && rows[0].updated_at !== lastCloudUpdatedAt){
+      applyCloudPayload(rows[0].data);
+      lastCloudUpdatedAt = rows[0].updated_at;
+      render();
+    }
+  }catch(e){}
+}
+
+setInterval(refreshCloudIfChanged, 15000);
+
+
 function normalizeKpiName(name){
   return String(name||'')
     .trim()
@@ -1202,6 +1336,7 @@ function loadKpiStore(){
 }
 function saveKpiStore(){
   localStorage.setItem(KPI_STORE_KEY, JSON.stringify(state.kpi || {}));
+  saveCloudStateDebounced();
 }
 function clearKpiStore(){
   state.kpi = {month:'', rows:[], sourceName:'', sourceType:''};
@@ -1321,7 +1456,7 @@ function getBestKpiPreparer(){
 
 
 function loadSettings(){try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'{}'); if(saved.password) state.settings.password=saved.password; if(saved.viewerPassword) state.settings.viewerPassword=saved.viewerPassword; if(saved.salesTargets) state.settings.salesTargets=saved.salesTargets; if(saved.monthlySalesTargets) state.settings.monthlySalesTargets=saved.monthlySalesTargets; if(saved.alertThresholds) state.settings.alertThresholds=saved.alertThresholds;}catch(e){}}
-function saveSettings(){localStorage.setItem(STORE_KEY, JSON.stringify(state.settings))}
+function saveSettings(){localStorage.setItem(STORE_KEY, JSON.stringify(state.settings)); saveCloudStateDebounced();}
 loadSettings();
 loadKpiStore();
 
@@ -1703,7 +1838,7 @@ function toggleMenu(btn){document.querySelectorAll('.ms').forEach(x=>{if(x!==btn
 document.addEventListener('click',(e)=>{if(!e.target.closest('.ms'))document.querySelectorAll('.ms').forEach(x=>x.classList.remove('open'))})
 function quickFilter(key,val){if(!val) return; state.filters[key]=[val]; if(key==='branches') state.activeTab='branches'; if(key==='preparers') state.activeTab='preparers'; if(key==='drivers') state.activeTab='drivers'; if(key==='platforms') state.activeTab='platforms'; if(key==='areas') state.activeTab='areas'; render()}
 function setSearchValue(val){state.search=val||''; document.getElementById('search').value=state.search; state.activeTab='customers'; render()}
-function clearAllData(){state.orders=[]; state.search=''; state.filters={years:[], months:[], days:[], branches:[], statuses:[], preparers:[], drivers:[], areas:[], platforms:[], payments:[]}; document.getElementById('search').value=''; document.getElementById('msg').textContent='تم حذف الداتا الحالية.'; document.getElementById('uploadStatus').innerHTML=''; render()}
+async function clearAllData(){state.orders=[]; state.search=''; state.filters={years:[], months:[], days:[], branches:[], statuses:[], preparers:[], drivers:[], areas:[], platforms:[], payments:[]}; document.getElementById('search').value=''; document.getElementById('msg').textContent='تم حذف الداتا الحالية.'; document.getElementById('uploadStatus').innerHTML=''; await saveCloudState(true); render()}
 function progressList(items,valKey,suffix,filterKey=''){if(!items.length) return '<div class="muted">No Data</div>'; const max=Math.max(...items.map(x=>x[valKey]||0),1); return items.map(i=>`<div class="row" style="display:block;cursor:${filterKey?'pointer':'default'}" ${filterKey?`onclick="quickFilter('${filterKey}', ${JSON.stringify(i.name)})"`:''}><div style="display:flex;justify-content:space-between"><strong>${i.name}</strong><span>${money(i[valKey]||0)}${suffix}</span></div><div class="progress"><div style="width:${((i[valKey]||0)/max)*100}%"></div></div></div>`).join('')}
 function updatePrintReport(c){
   if(!document.getElementById('reportDate')) return;
@@ -3943,6 +4078,7 @@ async function handleExcelUpload(mode){
       ? 'تم استبدال البيانات الحالية بنجاح: ' + finalCount + ' سجل'
       : 'تمت إضافة ودمج الملفات بنجاح: ' + finalCount + ' سجل';
 
+    await saveCloudState(true);
     render();
   }catch(err){
     document.getElementById('msg').textContent='حدث خطأ أثناء قراءة ملفات Excel.';
@@ -3959,7 +4095,8 @@ document.getElementById("replaceExcelBtn").onclick=async()=>{ await handleExcelU
 
 document.getElementById('appView').classList.add('hidden');
 document.getElementById('loginView').classList.remove('hidden');
-function attemptLogin(){
+async function attemptLogin(){
+  if(!cloudLoadedOnce){ await loadCloudState(false); }
   const selectedRole = document.getElementById('loginRole').value;
   const pass = (document.getElementById('loginPass').value || '').trim();
   const adminPasses = [String(state.settings.password || ''), String(DEFAULT_PASSWORD || '17512'), '17512'];
@@ -3980,7 +4117,7 @@ setLoginRole('admin');
 document.getElementById('loginBtn').onclick = attemptLogin;
 document.getElementById('loginPass').addEventListener('keydown', function(e){ if(e.key==='Enter') attemptLogin(); });
 
-render();
+loadCloudState(false).then(()=>{ render(); }).catch(()=>{ render(); });
 </script>
 </body>
 </html>
