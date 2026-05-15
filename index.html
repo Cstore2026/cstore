@@ -1116,7 +1116,7 @@ table{min-width:900px;}
       </div>
     </div>
 
-    <div id="msg" class="small muted status-line"></div><div id="cloudStatus" class="cloud-status-panel warn"><div><div class="cloud-title">V6.1 Supabase Sync</div><div class="cloud-text" id="cloudStatusText">جاري فحص الاتصال بقاعدة البيانات...</div></div><button class="btn btn-outline" onclick="loadCloudState(true).then(()=>render())">تحديث من الأونلاين</button></div><div id="uploadStatus"></div>
+    <div id="msg" class="small muted status-line"></div><div id="cloudStatus" class="cloud-status-panel warn"><div><div class="cloud-title">V6.2 Supabase Chunk Sync</div><div class="cloud-text" id="cloudStatusText">جاري فحص الاتصال بقاعدة البيانات...</div></div><button class="btn btn-outline" onclick="loadCloudState(true).then(()=>render())">تحديث من الأونلاين</button></div><div id="uploadStatus"></div>
   </div>
 
   <div class="filters no-print" id="filters"></div>
@@ -1154,11 +1154,14 @@ const state = {
 const KPI_PREPARERS_MONTH = '';
 const KPI_PREPARERS_ROWS = [];
 
-// ===== Supabase Online Sync - V6 =====
+// ===== Supabase Online Sync - V6.2 Chunked Save =====
 const SUPABASE_URL = 'https://lqcvrhlbxurdlnmlpjyr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxY3ZyaGxieHVyZGxubWxwanlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDY4NzMsImV4cCI6MjA5NDQyMjg3M30.fRWKuAfRn0wbCPeluFrqBpLRUKhDmy6iJxG9rZNvsf4';
 const CLOUD_TABLE = 'dashboard_store';
 const CLOUD_STATE_ID = 'app_state';
+const CLOUD_META_ID = 'app_state_meta';
+const CLOUD_ORDER_PREFIX = 'app_state_orders_';
+const CLOUD_CHUNK_SIZE = 350;
 const CLOUD_ENABLED = true;
 let cloudLoadedOnce = false;
 let cloudSaving = false;
@@ -1176,7 +1179,6 @@ function updateCloudStatus(kind, text){
   }catch(e){}
 }
 
-
 function cloudHeaders(extra={}){
   return {
     'apikey': SUPABASE_ANON_KEY,
@@ -1186,12 +1188,14 @@ function cloudHeaders(extra={}){
   };
 }
 
-function getCloudPayload(){
+function getCloudPayloadMeta(totalOrders, chunkCount){
   return {
-    version: 'v6_supabase_sync',
-    orders: state.orders || [],
+    version: 'v6_2_chunked_supabase_sync',
     settings: state.settings || {},
     kpi: state.kpi || {},
+    totalOrders: totalOrders || 0,
+    chunkCount: chunkCount || 0,
+    chunkSize: CLOUD_CHUNK_SIZE,
     updatedBy: state.sessionRole || 'system',
     savedAt: new Date().toISOString()
   };
@@ -1215,23 +1219,54 @@ function applyCloudPayload(payload){
   }
 }
 
+async function cloudFetchJson(path, options={}){
+  const res = await fetch(SUPABASE_URL + path, options);
+  const txt = await res.text();
+  let data = null;
+  try{ data = txt ? JSON.parse(txt) : null; }catch(e){ data = txt; }
+  if(!res.ok){
+    const details = typeof data === 'string' ? data : JSON.stringify(data);
+    throw new Error('Supabase error ' + res.status + ': ' + details);
+  }
+  return data;
+}
+
 async function loadCloudState(showMessage=false){
   if(!CLOUD_ENABLED) return false;
   try{
-    const url = `${SUPABASE_URL}/rest/v1/${CLOUD_TABLE}?id=eq.${encodeURIComponent(CLOUD_STATE_ID)}&select=data,updated_at`;
-    const res = await fetch(url, {headers: cloudHeaders()});
-    if(!res.ok) throw new Error('Supabase load error: ' + res.status);
-    const rows = await res.json();
-    if(rows && rows[0] && rows[0].data){
-      applyCloudPayload(rows[0].data);
-      updateCloudStatus('ok','متصل بسوبابيز وتم تحميل آخر بيانات أونلاين.');
-      lastCloudUpdatedAt = rows[0].updated_at || '';
+    // New V6.2 chunked format
+    const metaRows = await cloudFetchJson(`/rest/v1/${CLOUD_TABLE}?id=eq.${encodeURIComponent(CLOUD_META_ID)}&select=id,data,updated_at`, {headers: cloudHeaders()});
+    if(metaRows && metaRows[0] && metaRows[0].data){
+      const meta = metaRows[0].data || {};
+      const chunkCount = Number(meta.chunkCount || 0);
+      let orders = [];
+      if(chunkCount > 0){
+        const chunkRows = await cloudFetchJson(`/rest/v1/${CLOUD_TABLE}?id=like.${CLOUD_ORDER_PREFIX}*&select=id,data&order=id.asc`, {headers: cloudHeaders()});
+        (chunkRows || []).forEach(r=>{
+          const chunkOrders = r && r.data && Array.isArray(r.data.orders) ? r.data.orders : [];
+          orders = orders.concat(chunkOrders);
+        });
+      }
+      applyCloudPayload({settings: meta.settings || {}, kpi: meta.kpi || {}, orders});
+      updateCloudStatus('ok',`متصل بسوبابيز وتم تحميل آخر بيانات أونلاين. عدد الأوردرات: ${orders.length}`);
+      lastCloudUpdatedAt = metaRows[0].updated_at || meta.savedAt || '';
       cloudLoadedOnce = true;
       if(showMessage && document.getElementById('msg')){
         document.getElementById('msg').textContent = 'تم تحديث البيانات من قاعدة البيانات أونلاين.';
       }
       return true;
     }
+
+    // Backward compatibility with old one-row format
+    const oldRows = await cloudFetchJson(`/rest/v1/${CLOUD_TABLE}?id=eq.${encodeURIComponent(CLOUD_STATE_ID)}&select=data,updated_at`, {headers: cloudHeaders()});
+    if(oldRows && oldRows[0] && oldRows[0].data){
+      applyCloudPayload(oldRows[0].data);
+      updateCloudStatus('ok','تم تحميل بيانات أونلاين من النسخة القديمة. اضغط حفظ أونلاين الآن لتحويلها للنظام الجديد السريع.');
+      lastCloudUpdatedAt = oldRows[0].updated_at || '';
+      cloudLoadedOnce = true;
+      return true;
+    }
+
     cloudLoadedOnce = true;
     updateCloudStatus('warn','متصل بسوبابيز لكن لا توجد بيانات محفوظة أونلاين حتى الآن. ارفع Excel ثم اضغط حفظ أونلاين الآن.');
     return false;
@@ -1245,25 +1280,47 @@ async function loadCloudState(showMessage=false){
   }
 }
 
+async function saveRow(id, data){
+  return cloudFetchJson(`/rest/v1/${CLOUD_TABLE}?on_conflict=id`, {
+    method: 'POST',
+    headers: cloudHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body: JSON.stringify({id, data, updated_at: new Date().toISOString()})
+  });
+}
+
+async function deleteOldChunks(){
+  try{
+    await cloudFetchJson(`/rest/v1/${CLOUD_TABLE}?id=like.${CLOUD_ORDER_PREFIX}*`, {
+      method: 'DELETE',
+      headers: cloudHeaders({'Prefer':'return=minimal'})
+    });
+  }catch(e){
+    // If there are no rows or the delete returns an edge error, continue and overwrite current chunks.
+    console.warn('delete chunks warning', e);
+  }
+}
+
 async function saveCloudState(showMessage=false){
   if(!CLOUD_ENABLED || suppressCloudSave) return false;
   try{
     cloudSaving = true;
-    const body = JSON.stringify({
-      id: CLOUD_STATE_ID,
-      data: getCloudPayload(),
-      updated_at: new Date().toISOString()
-    });
-    const url = `${SUPABASE_URL}/rest/v1/${CLOUD_TABLE}?on_conflict=id`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: cloudHeaders({'Prefer':'resolution=merge-duplicates,return=representation'}),
-      body
-    });
-    if(!res.ok) throw new Error('Supabase save error: ' + res.status + ' ' + await res.text());
-    const rows = await res.json().catch(()=>[]);
-    if(rows && rows[0] && rows[0].updated_at) lastCloudUpdatedAt = rows[0].updated_at;
-    updateCloudStatus('ok','تم الحفظ أونلاين بنجاح. افتح من الموبايل واعمل Refresh.');
+    const orders = Array.isArray(state.orders) ? state.orders : [];
+    const chunkCount = Math.ceil(orders.length / CLOUD_CHUNK_SIZE);
+    updateCloudStatus('warn',`جاري الحفظ أونلاين بنظام أجزاء لتجنب Timeout... 0/${chunkCount}`);
+
+    await deleteOldChunks();
+
+    for(let i=0; i<chunkCount; i++){
+      const from = i * CLOUD_CHUNK_SIZE;
+      const part = orders.slice(from, from + CLOUD_CHUNK_SIZE);
+      const id = CLOUD_ORDER_PREFIX + String(i).padStart(4,'0');
+      await saveRow(id, {index:i, orders:part, savedAt:new Date().toISOString()});
+      updateCloudStatus('warn',`جاري الحفظ أونلاين... ${i+1}/${chunkCount}`);
+    }
+
+    await saveRow(CLOUD_META_ID, getCloudPayloadMeta(orders.length, chunkCount));
+    lastCloudUpdatedAt = new Date().toISOString();
+    updateCloudStatus('ok',`تم الحفظ أونلاين بنجاح. عدد الأوردرات: ${orders.length}. افتح من الموبايل واعمل Refresh.`);
     if(showMessage && document.getElementById('msg')){
       document.getElementById('msg').textContent = 'تم حفظ البيانات أونلاين ومشاركتها مع كل الأجهزة.';
     }
@@ -1283,18 +1340,15 @@ async function saveCloudState(showMessage=false){
 function saveCloudStateDebounced(){
   if(!CLOUD_ENABLED || suppressCloudSave) return;
   clearTimeout(cloudSaveTimer);
-  cloudSaveTimer = setTimeout(()=>{ saveCloudState(false); }, 900);
+  cloudSaveTimer = setTimeout(()=>{ saveCloudState(false); }, 1200);
 }
 
 async function refreshCloudIfChanged(){
   if(!CLOUD_ENABLED || cloudSaving || state.sessionRole === 'admin') return;
   try{
-    const url = `${SUPABASE_URL}/rest/v1/${CLOUD_TABLE}?id=eq.${encodeURIComponent(CLOUD_STATE_ID)}&select=data,updated_at`;
-    const res = await fetch(url, {headers: cloudHeaders()});
-    if(!res.ok) return;
-    const rows = await res.json();
+    const rows = await cloudFetchJson(`/rest/v1/${CLOUD_TABLE}?id=eq.${encodeURIComponent(CLOUD_META_ID)}&select=data,updated_at`, {headers: cloudHeaders()});
     if(rows && rows[0] && rows[0].updated_at && rows[0].updated_at !== lastCloudUpdatedAt){
-      applyCloudPayload(rows[0].data);
+      await loadCloudState(false);
       lastCloudUpdatedAt = rows[0].updated_at;
       render();
     }
