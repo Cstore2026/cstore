@@ -970,6 +970,8 @@ table{min-width:900px;}
   .banner-title{font-size:20px;}
 }
 
+
+.cloud-status-panel{margin:12px 0 0;padding:10px 12px;border-radius:16px;border:1px solid rgba(213,51,114,.22);background:rgba(255,244,248,.92);display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}.cloud-status-panel .cloud-title{font-weight:900;color:#8b1d52}.cloud-status-panel .cloud-text{font-size:12px;color:#68515e}.cloud-status-panel.ok{border-color:rgba(31,158,95,.35);background:rgba(235,255,245,.92)}.cloud-status-panel.bad{border-color:rgba(210,50,70,.35);background:rgba(255,240,242,.92)}.cloud-status-panel.warn{border-color:rgba(234,167,40,.45);background:rgba(255,248,230,.95)}
 </style>
 </head>
 <body>
@@ -1087,6 +1089,7 @@ table{min-width:900px;}
         <button class="btn btn-outline" id="printA4Btn" onclick="window.print()">Print / PDF A4</button>
         <button class="btn btn-outline" id="exportExcelBtn" onclick="exportReportExcel()">Export Excel</button>
         <button class="btn btn-primary" id="boardPdfBtn" onclick="openBoardReportPrint()">Board Report / Print PDF</button>
+        <button class="btn btn-outline" id="cloudSaveBtn" onclick="saveCloudState(true)">حفظ أونلاين الآن</button>
       </div>
     </div>
 
@@ -1113,7 +1116,7 @@ table{min-width:900px;}
       </div>
     </div>
 
-    <div id="msg" class="small muted status-line"></div><div id="uploadStatus"></div>
+    <div id="msg" class="small muted status-line"></div><div id="cloudStatus" class="cloud-status-panel warn"><div><div class="cloud-title">V6.1 Supabase Sync</div><div class="cloud-text" id="cloudStatusText">جاري فحص الاتصال بقاعدة البيانات...</div></div><button class="btn btn-outline" onclick="loadCloudState(true).then(()=>render())">تحديث من الأونلاين</button></div><div id="uploadStatus"></div>
   </div>
 
   <div class="filters no-print" id="filters"></div>
@@ -1162,6 +1165,17 @@ let cloudSaving = false;
 let cloudSaveTimer = null;
 let lastCloudUpdatedAt = '';
 let suppressCloudSave = false;
+function updateCloudStatus(kind, text){
+  try{
+    const box = document.getElementById('cloudStatus');
+    const txt = document.getElementById('cloudStatusText');
+    if(!box || !txt) return;
+    box.classList.remove('ok','bad','warn');
+    box.classList.add(kind || 'warn');
+    txt.textContent = text || '';
+  }catch(e){}
+}
+
 
 function cloudHeaders(extra={}){
   return {
@@ -1210,6 +1224,7 @@ async function loadCloudState(showMessage=false){
     const rows = await res.json();
     if(rows && rows[0] && rows[0].data){
       applyCloudPayload(rows[0].data);
+      updateCloudStatus('ok','متصل بسوبابيز وتم تحميل آخر بيانات أونلاين.');
       lastCloudUpdatedAt = rows[0].updated_at || '';
       cloudLoadedOnce = true;
       if(showMessage && document.getElementById('msg')){
@@ -1218,9 +1233,11 @@ async function loadCloudState(showMessage=false){
       return true;
     }
     cloudLoadedOnce = true;
+    updateCloudStatus('warn','متصل بسوبابيز لكن لا توجد بيانات محفوظة أونلاين حتى الآن. ارفع Excel ثم اضغط حفظ أونلاين الآن.');
     return false;
   }catch(err){
     console.warn(err);
+    updateCloudStatus('bad','فشل الاتصال بسوبابيز: ' + (err.message || err));
     if(showMessage && document.getElementById('msg')){
       document.getElementById('msg').textContent = 'تعذر تحميل البيانات أونلاين، سيتم استخدام بيانات الجهاز مؤقتًا.';
     }
@@ -1246,14 +1263,16 @@ async function saveCloudState(showMessage=false){
     if(!res.ok) throw new Error('Supabase save error: ' + res.status + ' ' + await res.text());
     const rows = await res.json().catch(()=>[]);
     if(rows && rows[0] && rows[0].updated_at) lastCloudUpdatedAt = rows[0].updated_at;
+    updateCloudStatus('ok','تم الحفظ أونلاين بنجاح. افتح من الموبايل واعمل Refresh.');
     if(showMessage && document.getElementById('msg')){
       document.getElementById('msg').textContent = 'تم حفظ البيانات أونلاين ومشاركتها مع كل الأجهزة.';
     }
     return true;
   }catch(err){
     console.warn(err);
+    updateCloudStatus('bad','فشل الحفظ أونلاين: ' + (err.message || err));
     if(showMessage && document.getElementById('msg')){
-      document.getElementById('msg').textContent = 'لم يتم الحفظ أونلاين. راجع اتصال الإنترنت أو إعدادات Supabase.';
+      document.getElementById('msg').textContent = 'لم يتم الحفظ أونلاين: ' + (err.message || err);
     }
     return false;
   }finally{
