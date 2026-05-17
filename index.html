@@ -61,6 +61,7 @@ body.light{--bg:#fff7fb;--bg2:#fff0f6;--panel:#ffffff;--panel2:#fff7fb;--text:#4
 .badge{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}.ok{background:var(--okbg);color:var(--ok)} .bad{background:var(--badbg);color:var(--bad)} .warn{background:var(--warnbg);color:var(--warn)}
 .filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin:16px 0}.ms{position:relative}.ms-btn{width:100%;height:44px;border:1px solid var(--border);border-radius:14px;background:var(--panel);color:var(--text);padding:0 12px;text-align:right;cursor:pointer}
 .ms-menu{position:absolute;top:48px;right:0;left:0;z-index:20;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:10px;display:none;max-height:260px;overflow:auto}.ms.open .ms-menu{display:block}.ms-option{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px}
+.date-range-filter{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;min-height:44px}.date-range-title{font-weight:800;font-size:12px;color:var(--muted);margin-bottom:8px}.date-range-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.date-range-fields label{display:grid;gap:4px}.date-range-fields span{font-size:11px;color:var(--muted);font-weight:700}.date-range-fields select{width:100%;height:38px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);color:var(--text);padding:0 8px}.date-range-hint{font-size:11px;color:var(--muted);margin-top:6px;font-weight:700}
 .tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.tab{padding:10px 14px;border-radius:999px;border:1px solid var(--border);cursor:pointer;background:var(--panel);color:var(--text)}.tab.active{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;border-color:transparent}
 .tableWrap{overflow:auto;border:1px solid var(--border);border-radius:18px;background:var(--panel);margin-top:12px} table{width:100%;border-collapse:collapse;min-width:1100px} th,td{padding:11px;border-bottom:1px solid var(--border);text-align:right;font-size:13px;white-space:nowrap} th{background:rgba(255,255,255,.04);color:var(--muted)}
 .section-title{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}.note{padding:12px 14px;border-radius:14px;background:linear-gradient(180deg,var(--panel),rgba(255,255,255,.02));border:1px solid var(--border);line-height:1.8}.hidden{display:none!important}
@@ -973,9 +974,19 @@ table{min-width:900px;}
 
 .cloud-status-panel{margin:12px 0 0;padding:10px 12px;border-radius:16px;border:1px solid rgba(213,51,114,.22);background:rgba(255,244,248,.92);display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}.cloud-status-panel .cloud-title{font-weight:900;color:#8b1d52}.cloud-status-panel .cloud-text{font-size:12px;color:#68515e}.cloud-status-panel.ok{border-color:rgba(31,158,95,.35);background:rgba(235,255,245,.92)}.cloud-status-panel.bad{border-color:rgba(210,50,70,.35);background:rgba(255,240,242,.92)}.cloud-status-panel.warn{border-color:rgba(234,167,40,.45);background:rgba(255,248,230,.95)}
 </style>
+
+<!-- PWA settings -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2b1035">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="C Store Dashboard">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
 </head>
 <body>
-<div id="loginView" class="login-wrap hidden">
+<div id="loginView" class="login-wrap">
   <div class="card login-card simple-login-card polished-login-card">
     <div class="login-simple">
       <div class="login-head-polished">
@@ -1029,7 +1040,7 @@ table{min-width:900px;}
   </div>
 </div>
 
-<div class="wrap app-shell" id="appView">
+<div class="wrap app-shell hidden" id="appView">
   <header class="executive-nav no-print">
     <div class="nav-brand">
       <div class="nav-logo">C</div>
@@ -1116,7 +1127,7 @@ table{min-width:900px;}
       </div>
     </div>
 
-    <div id="msg" class="small muted status-line"></div><div id="cloudStatus" class="cloud-status-panel warn"><div><div class="cloud-title">V6.2 Supabase Chunk Sync</div><div class="cloud-text" id="cloudStatusText">جاري فحص الاتصال بقاعدة البيانات...</div></div><button class="btn btn-outline" onclick="loadCloudState(true).then(()=>render())">تحديث من الأونلاين</button></div><div id="uploadStatus"></div>
+    <div id="msg" class="small muted status-line"></div><div id="cloudStatus" class="cloud-status-panel warn"><div><div class="cloud-title">V6.9.4 Login Gate Fix</div><div class="cloud-text" id="cloudStatusText">جاري فحص الاتصال بقاعدة البيانات...</div></div><button class="btn btn-outline" onclick="loadCloudState(true).then(()=>render())">تحديث من الأونلاين</button></div><div id="uploadStatus"></div>
   </div>
 
   <div class="filters no-print" id="filters"></div>
@@ -1143,11 +1154,14 @@ table{min-width:900px;}
 const RAW_DATA = [];
 const STORE_KEY = 'cstore_dashboard_pro_settings_v1';
 const DEFAULT_PASSWORD = '17512';
+function defaultFilters(){
+  return {years:[], months:[], dateFrom:'', dateTo:'', days:[], branches:[], statuses:[], preparers:[], drivers:[], areas:[], platforms:[], payments:[]};
+}
 const state = {
   orders: RAW_DATA, search:"", activeTab:"overview", showOrders:false,
-  filters:{years:[], months:[], days:[], branches:[], statuses:[], preparers:[], drivers:[], areas:[], platforms:[], payments:[]},
-  settings:{password:DEFAULT_PASSWORD, viewerPassword:'12345', salesTargets:{}, bands:{branches:{}, preparers:{}, drivers:{}, customers:{}, platforms:{}, areas:{}}, alertThresholds:{cancelRate:10}},
-  sessionRole:'', lang:(localStorage.getItem('cstore_lang')||''), kpi:{month:'', rows:[], sourceName:'', sourceType:''}, pendingTargets:{}, dailySelectedDate:'', periodFrom:'', periodTo:'', branchPeakSelected:''
+  filters: defaultFilters(),
+  settings:{password:DEFAULT_PASSWORD, viewerPassword:'12345', salesTargets:{}, bands:{branches:{}, preparers:{}, drivers:{}, customers:{}, platforms:{}, areas:{}}, alertThresholds:{cancelRate:10}, branchAliases:{}},
+  sessionRole:'', lang:(localStorage.getItem('cstore_lang')||''), kpi:{month:'', rows:[], sourceName:'', sourceType:''}, auditLog:[], pendingTargets:{}, dailySelectedDate:'', periodFrom:'', periodTo:'', branchPeakSelected:''
 };
 
 
@@ -1190,9 +1204,10 @@ function cloudHeaders(extra={}){
 
 function getCloudPayloadMeta(totalOrders, chunkCount){
   return {
-    version: 'v6_2_chunked_supabase_sync',
+    version: 'v6_7_security_audit_dashboard',
     settings: state.settings || {},
     kpi: state.kpi || {},
+    auditLog: state.auditLog || [],
     totalOrders: totalOrders || 0,
     chunkCount: chunkCount || 0,
     chunkSize: CLOUD_CHUNK_SIZE,
@@ -1211,6 +1226,9 @@ function applyCloudPayload(payload){
     }
     if(payload.kpi && typeof payload.kpi === 'object'){
       state.kpi = {...state.kpi, ...payload.kpi};
+    }
+    if(Array.isArray(payload.auditLog)){
+      state.auditLog = payload.auditLog.slice(0, 300);
     }
     try{ localStorage.setItem(STORE_KEY, JSON.stringify(state.settings)); }catch(e){}
     try{ localStorage.setItem(KPI_STORE_KEY, JSON.stringify(state.kpi || {})); }catch(e){}
@@ -1247,7 +1265,7 @@ async function loadCloudState(showMessage=false){
           orders = orders.concat(chunkOrders);
         });
       }
-      applyCloudPayload({settings: meta.settings || {}, kpi: meta.kpi || {}, orders});
+      applyCloudPayload({settings: meta.settings || {}, kpi: meta.kpi || {}, auditLog: meta.auditLog || [], orders});
       updateCloudStatus('ok',`متصل بسوبابيز وتم تحميل آخر بيانات أونلاين. عدد الأوردرات: ${orders.length}`);
       lastCloudUpdatedAt = metaRows[0].updated_at || meta.savedAt || '';
       cloudLoadedOnce = true;
@@ -1300,8 +1318,36 @@ async function deleteOldChunks(){
   }
 }
 
+
+function auditRoleLabel(){ return state.sessionRole === 'admin' ? 'Admin' : (state.sessionRole === 'viewer' ? 'Viewer' : 'System'); }
+function addAudit(action, details='', options={}){
+  try{
+    if(!Array.isArray(state.auditLog)) state.auditLog = [];
+    const entry = {
+      time: new Date().toISOString(),
+      role: auditRoleLabel(),
+      action: String(action || ''),
+      details: String(details || ''),
+      orders: Array.isArray(state.orders) ? state.orders.length : 0
+    };
+    state.auditLog.unshift(entry);
+    state.auditLog = state.auditLog.slice(0, 300);
+    if(!options.noSave && state.sessionRole === 'admin') saveCloudStateDebounced();
+  }catch(e){ console.warn('audit log warning', e); }
+}
+function requireAdminAction(label){
+  if(isAdmin()) return true;
+  const msg = state.lang === 'en' ? 'Viewer is read-only. Admin permission required.' : 'حساب Viewer للعرض فقط. مطلوب صلاحية Admin للتعديل.';
+  const el = document.getElementById('msg');
+  if(el) el.textContent = msg;
+  updateCloudStatus('warn', msg);
+  addAudit('Blocked viewer action', label || 'read-only action', {noSave:true});
+  return false;
+}
+
 async function saveCloudState(showMessage=false){
   if(!CLOUD_ENABLED || suppressCloudSave) return false;
+  if(state.sessionRole && !isAdmin()) return requireAdminAction('Save online') && false;
   try{
     cloudSaving = true;
     const orders = Array.isArray(state.orders) ? state.orders : [];
@@ -1318,6 +1364,7 @@ async function saveCloudState(showMessage=false){
       updateCloudStatus('warn',`جاري الحفظ أونلاين... ${i+1}/${chunkCount}`);
     }
 
+    if(showMessage){ addAudit('Save online', 'Saved ' + orders.length + ' orders to Supabase', {noSave:true}); }
     await saveRow(CLOUD_META_ID, getCloudPayloadMeta(orders.length, chunkCount));
     lastCloudUpdatedAt = new Date().toISOString();
     updateCloudStatus('ok',`تم الحفظ أونلاين بنجاح. عدد الأوردرات: ${orders.length}. افتح من الموبايل واعمل Refresh.`);
@@ -1412,6 +1459,7 @@ function saveKpiStore(){
   saveCloudStateDebounced();
 }
 function clearKpiStore(){
+  if(!requireAdminAction('Clear KPI store')) return;
   state.kpi = {month:'', rows:[], sourceName:'', sourceType:''};
   saveKpiStore();
 }
@@ -1528,8 +1576,8 @@ function getBestKpiPreparer(){
 }
 
 
-function loadSettings(){try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'{}'); if(saved.password) state.settings.password=saved.password; if(saved.viewerPassword) state.settings.viewerPassword=saved.viewerPassword; if(saved.salesTargets) state.settings.salesTargets=saved.salesTargets; if(saved.monthlySalesTargets) state.settings.monthlySalesTargets=saved.monthlySalesTargets; if(saved.alertThresholds) state.settings.alertThresholds=saved.alertThresholds;}catch(e){}}
-function saveSettings(){localStorage.setItem(STORE_KEY, JSON.stringify(state.settings)); saveCloudStateDebounced();}
+function loadSettings(){try{const saved=JSON.parse(localStorage.getItem(STORE_KEY)||'{}'); if(saved.password) state.settings.password=saved.password; if(saved.viewerPassword) state.settings.viewerPassword=saved.viewerPassword; if(saved.salesTargets) state.settings.salesTargets=saved.salesTargets; if(saved.monthlySalesTargets) state.settings.monthlySalesTargets=saved.monthlySalesTargets; if(saved.alertThresholds) state.settings.alertThresholds=saved.alertThresholds; if(saved.branchAliases) state.settings.branchAliases=saved.branchAliases;}catch(e){}}
+function saveSettings(){ if(state.sessionRole && !isAdmin()) return requireAdminAction('Settings update'); localStorage.setItem(STORE_KEY, JSON.stringify(state.settings)); addAudit('Settings updated','Dashboard settings changed',{noSave:true}); saveCloudStateDebounced();}
 loadSettings();
 loadKpiStore();
 
@@ -1593,6 +1641,13 @@ const I18N_EN = {
   "السنة":"Year",
   "الشهر":"Month",
   "اليوم":"Day",
+  "فترة الأيام":"Day Period",
+  "من":"From",
+  "إلى":"To",
+  "من أول يوم":"From first day",
+  "إلى آخر يوم":"To last day",
+  "يوم متاح":"available days",
+  "لا توجد أيام":"No available days",
   "الفرع":"Branch",
   "المنطقة":"Area",
   "الحالة":"Status",
@@ -1799,6 +1854,7 @@ function setLoginRole(role){
 }
 
 function logoutUser(){
+  if(state.sessionRole) addAudit('Logout', auditRoleLabel() + ' logged out', {noSave:true});
   state.sessionRole = '';
   document.getElementById('appView').classList.add('hidden');
   document.getElementById('loginView').classList.remove('hidden');
@@ -1834,12 +1890,36 @@ function scoreBadge(score){if(score>=85) return '<span class="badge ok">ممتا
 function normalizeStatus(v){const s=String(v||"").trim(); if(s==="مفوتر بالكامل") return "تم"; if(s==="لا توجد مبالغ لفوترتها") return "ملغي / مرتجع"; return s||""}
 function firstNonEmpty(){for(const v of arguments){const s=String(v??"").trim(); if(s&&s.toLowerCase()!=='nan') return s;} return ""}
 function toAmount(v){if(v===null||v===undefined||v==="") return 0; const s=String(v).replace(/,/g,'').trim(); const n=Number(s); return isNaN(n)?0:n}
-function transformExcelRows(rows){
-  const branchMap={"فرع تريومف":"فرع مصر الجديدة","التجمع":"فرع التجمع الاول","فرع ميدان الجزائر":"فرع المعادي","ABBAS BRANCH":"فرع مدينة نصر"};
-  function excelDate(v){const p=n=>String(n).padStart(2,'0'); if(typeof v==="number" && window.XLSX && XLSX.SSF && XLSX.SSF.parse_date_code){const d=XLSX.SSF.parse_date_code(v); if(d) return {date:`${d.y}-${p(d.m)}-${p(d.d)}`,time:`${p(d.H||0)}:${p(d.M||0)}`};} const dt=new Date(v); if(isNaN(dt)) return {date:firstNonEmpty(v).slice(0,10),time:firstNonEmpty(v).slice(11,16)}; return {date:`${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}`,time:`${p(dt.getHours())}:${p(dt.getMinutes())}`}}
-  return rows.map(r=>{const dt=excelDate(r["تاريخ الطلب"]); return {orderNumber:firstNonEmpty(r["مرجع الطلب"]), orderDate:dt.date, orderTime:dt.time, branch:branchMap[firstNonEmpty(r["المستودع"])]||firstNonEmpty(r["المستودع"],""), platform:firstNonEmpty(r["علامات التصنيف"], ""), customerName:firstNonEmpty(r["عنوان الفاتورة"],r["العميل/علامات التصنيف /اسم العرض"],"عميل غير مسمى"), customerPhone:firstNonEmpty(r["العميل/الهاتف المحمول"],r["العميل/رقم الهاتف"],""), area:firstNonEmpty(r["العميل/الشارع"],r["العميل/الشارع 2"],""), amount:toAmount(r["الإجمالي"]), paymentMethod:firstNonEmpty(r["Payment Method(POS)(1)"],r["Payment Method(POS)(2)"],""), preparer:firstNonEmpty(r["Prepared By"],""), driver:firstNonEmpty(r["Delivery Man/اسم العرض"],""), status:normalizeStatus(r["حالة الفاتورة"])};}).filter(x=>x.orderNumber)
+const STANDARD_BRANCH_MAP={"فرع تريومف":"فرع مصر الجديدة","التجمع":"فرع التجمع الاول","فرع ميدان الجزائر":"فرع المعادي","ABBAS BRANCH":"فرع مدينة نصر"};
+function standardizeBranchName(name){
+  const n=cleanBranchName(name);
+  return STANDARD_BRANCH_MAP[n] || n;
 }
-function filtered(){return state.orders.filter(o=>{const p=ymd(o.orderDate),f=state.filters,text=[o.orderNumber,o.customerName,o.customerPhone,o.area,o.branch,o.preparer,o.driver,o.platform,o.paymentMethod].join(" ").toLowerCase(); return (!f.years.length||f.years.includes(p.y))&&(!f.months.length||f.months.includes(p.m))&&(!f.days.length||f.days.includes(p.day))&&(!f.branches.length||f.branches.includes(o.branch))&&(!f.statuses.length||f.statuses.includes(o.status))&&(!f.preparers.length||f.preparers.includes(o.preparer))&&(!f.drivers.length||f.drivers.includes(o.driver))&&(!f.areas.length||f.areas.includes(o.area))&&(!f.platforms.length||f.platforms.includes(o.platform))&&(!f.payments.length||f.payments.includes(o.paymentMethod))&&(!state.search||text.includes(state.search.toLowerCase()));})}
+function transformExcelRows(rows){
+  function excelDate(v){const p=n=>String(n).padStart(2,'0'); if(typeof v==="number" && window.XLSX && XLSX.SSF && XLSX.SSF.parse_date_code){const d=XLSX.SSF.parse_date_code(v); if(d) return {date:`${d.y}-${p(d.m)}-${p(d.d)}`,time:`${p(d.H||0)}:${p(d.M||0)}`};} const dt=new Date(v); if(isNaN(dt)) return {date:firstNonEmpty(v).slice(0,10),time:firstNonEmpty(v).slice(11,16)}; return {date:`${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}`,time:`${p(dt.getHours())}:${p(dt.getMinutes())}`}}
+  return rows.map(r=>{const dt=excelDate(r["تاريخ الطلب"]); const originalBranch=firstNonEmpty(r["المستودع"],""); const standardBranch=standardizeBranchName(originalBranch); const finalBranch=mapBranchName(standardBranch); return {orderNumber:firstNonEmpty(r["مرجع الطلب"]), orderDate:dt.date, orderTime:dt.time, branch:standardBranch, displayBranch:finalBranch, originalBranch:originalBranch, platform:firstNonEmpty(r["علامات التصنيف"], ""), customerName:firstNonEmpty(r["عنوان الفاتورة"],r["العميل/علامات التصنيف /اسم العرض"],"عميل غير مسمى"), customerPhone:firstNonEmpty(r["العميل/الهاتف المحمول"],r["العميل/رقم الهاتف"],""), area:firstNonEmpty(r["العميل/الشارع"],r["العميل/الشارع 2"],""), amount:toAmount(r["الإجمالي"]), paymentMethod:firstNonEmpty(r["Payment Method(POS)(1)"],r["Payment Method(POS)(2)"],""), preparer:firstNonEmpty(r["Prepared By"],""), driver:firstNonEmpty(r["Delivery Man/اسم العرض"],""), status:normalizeStatus(r["حالة الفاتورة"])};}).filter(x=>x.orderNumber)
+}
+function filtered(){
+  return (state.orders||[]).map(o=>({
+    ...o,
+    branch: branchForCalc(o)
+  })).filter(o=>{
+    const p=ymd(o.orderDate),f=state.filters,
+      text=[o.orderNumber,o.customerName,o.customerPhone,o.area,o.branch,o.originalBranch,o.preparer,o.driver,o.platform,o.paymentMethod].join(" ").toLowerCase();
+    const d=String(o.orderDate||'').slice(0,10);
+    return (!f.years.length||f.years.includes(p.y))&&
+      (!f.months.length||f.months.includes(p.m))&&
+      (!f.dateFrom||d>=f.dateFrom)&&(!f.dateTo||d<=f.dateTo)&&
+      (!f.branches.length||f.branches.includes(o.branch))&&
+      (!f.statuses.length||f.statuses.includes(o.status))&&
+      (!f.preparers.length||f.preparers.includes(o.preparer))&&
+      (!f.drivers.length||f.drivers.includes(o.driver))&&
+      (!f.areas.length||f.areas.includes(o.area))&&
+      (!f.platforms.length||f.platforms.includes(o.platform))&&
+      (!f.payments.length||f.payments.includes(o.paymentMethod))&&
+      (!state.search||text.includes(state.search.toLowerCase()));
+  });
+}
 
 function countBy(data,key){return Object.entries(data.reduce((a,o)=>{const k=o[key]||""; if(!k) return a; a[k]=(a[k]||0)+1; return a;},{})).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count)}
 function getMonthSummary(data){const map={}; data.forEach(o=>{const mk=(o.orderDate||'').slice(0,7); if(!mk) return; if(!map[mk]) map[mk]={month:mk,orders:0,sales:0,canceled:0,completed:0}; map[mk].orders++; if(o.status==='تم'){map[mk].completed++; map[mk].sales+=Number(o.amount||0)} else if(o.status==='ملغي / مرتجع') map[mk].canceled++;}); return Object.values(map).map(m=>({...m,cancelRate:m.orders?(m.canceled/m.orders)*100:0,avgOrder:m.completed?(m.sales/m.completed):0})).sort((a,b)=>a.month.localeCompare(b.month))}
@@ -1883,7 +1963,7 @@ function calc(){
   if(branches.some(b=>b.target && b.targetPct<70)) alerts.push('هناك فروع أقل من 70% من هدف المبيعات');
   if(monthlyOrders.length>=2){const cur=monthlyOrders[monthlyOrders.length-1], prev=monthlyOrders[monthlyOrders.length-2]; if(cur.sales<prev.sales) alerts.push('مبيعات '+cur.month+' أقل من '+prev.month); if(cur.cancelRate>prev.cancelRate) alerts.push('إلغاء '+cur.month+' أعلى من '+prev.month);}
   const bestKpiPreparer = getBestKpiPreparer();
-  return {data,total:done.length,totalAll:data.length,sales,avg,badCount:bad.length,cancelRate,branches,preparers,drivers,platforms,areas,customers,payments,hourly,monthlyOrders,daily,alerts,targetSummary,topCustomer:customers[0]||null,peakHour:hourly[0]?.name||"—",bestKpiPreparer,kpiPreparerMonth:getActiveKpiMonth()}
+  return {data,total:done.length,completed:done.length,totalAll:data.length,sales,totalSales:sales,avg,badCount:bad.length,cancelRate,branches,preparers,drivers,platforms,areas,customers,payments,hourly,monthlyOrders,daily,alerts,targetSummary,topCustomer:customers[0]||null,peakHour:hourly[0]?.name||"—",bestKpiPreparer,kpiPreparerMonth:getActiveKpiMonth()}
 }
 function toggleFilter(key,val){
   const arr=state.filters[key];
@@ -1907,11 +1987,34 @@ function renderMultiSelect(title,items,key){
     return `<label class="ms-option"><input type="checkbox" data-key="${key}" data-value="${encoded}" ${checked} onchange="toggleFilterFromEvent(this)"><span>${t}</span></label>`;
   }).join("")}</div></div>`
 }
+function getAvailableDatesForRange(){
+  const f=state.filters || defaultFilters();
+  return [...new Set(state.orders.filter(o=>{
+    const p=ymd(o.orderDate);
+    return (!f.years.length || f.years.includes(p.y)) && (!f.months.length || f.months.includes(p.m));
+  }).map(o=>String(o.orderDate||'').slice(0,10)).filter(Boolean))].sort();
+}
+function renderDateRangeFilter(dates){
+  const f=state.filters || defaultFilters();
+  const fromOptions = ['<option value="">'+tr('من أول يوم')+'</option>'].concat(dates.map(d=>`<option value="${d}" ${f.dateFrom===d?'selected':''}>${d}</option>`)).join('');
+  const toOptions = ['<option value="">'+tr('إلى آخر يوم')+'</option>'].concat(dates.map(d=>`<option value="${d}" ${f.dateTo===d?'selected':''}>${d}</option>`)).join('');
+  return `<div class="date-range-filter"><div class="date-range-title">${tr('فترة الأيام')}</div><div class="date-range-fields"><label><span>${tr('من')}</span><select onchange="setDateRangeFilter('dateFrom',this.value)">${fromOptions}</select></label><label><span>${tr('إلى')}</span><select onchange="setDateRangeFilter('dateTo',this.value)">${toOptions}</select></label></div><div class="date-range-hint">${dates.length?dates.length+' '+tr('يوم متاح') : tr('لا توجد أيام')}</div></div>`;
+}
+function setDateRangeFilter(key,value){
+  state.filters[key]=value || '';
+  if(state.filters.dateFrom && state.filters.dateTo && state.filters.dateFrom > state.filters.dateTo){
+    const temp = state.filters.dateFrom;
+    state.filters.dateFrom = state.filters.dateTo;
+    state.filters.dateTo = temp;
+  }
+  render();
+}
+
 function toggleMenu(btn){document.querySelectorAll('.ms').forEach(x=>{if(x!==btn.parentElement)x.classList.remove('open')}); btn.parentElement.classList.toggle('open')}
 document.addEventListener('click',(e)=>{if(!e.target.closest('.ms'))document.querySelectorAll('.ms').forEach(x=>x.classList.remove('open'))})
 function quickFilter(key,val){if(!val) return; state.filters[key]=[val]; if(key==='branches') state.activeTab='branches'; if(key==='preparers') state.activeTab='preparers'; if(key==='drivers') state.activeTab='drivers'; if(key==='platforms') state.activeTab='platforms'; if(key==='areas') state.activeTab='areas'; render()}
 function setSearchValue(val){state.search=val||''; document.getElementById('search').value=state.search; state.activeTab='customers'; render()}
-async function clearAllData(){state.orders=[]; state.search=''; state.filters={years:[], months:[], days:[], branches:[], statuses:[], preparers:[], drivers:[], areas:[], platforms:[], payments:[]}; document.getElementById('search').value=''; document.getElementById('msg').textContent='تم حذف الداتا الحالية.'; document.getElementById('uploadStatus').innerHTML=''; await saveCloudState(true); render()}
+async function clearAllData(){ if(!requireAdminAction('Clear all data')) return; addAudit('Clear all data','All current orders cleared',{noSave:true}); state.orders=[]; state.search=''; state.filters=defaultFilters(); document.getElementById('search').value=''; document.getElementById('msg').textContent='تم حذف الداتا الحالية.'; document.getElementById('uploadStatus').innerHTML=''; await saveCloudState(true); render()}
 function progressList(items,valKey,suffix,filterKey=''){if(!items.length) return '<div class="muted">No Data</div>'; const max=Math.max(...items.map(x=>x[valKey]||0),1); return items.map(i=>`<div class="row" style="display:block;cursor:${filterKey?'pointer':'default'}" ${filterKey?`onclick="quickFilter('${filterKey}', ${JSON.stringify(i.name)})"`:''}><div style="display:flex;justify-content:space-between"><strong>${i.name}</strong><span>${money(i[valKey]||0)}${suffix}</span></div><div class="progress"><div style="width:${((i[valKey]||0)/max)*100}%"></div></div></div>`).join('')}
 function updatePrintReport(c){
   if(!document.getElementById('reportDate')) return;
@@ -2010,12 +2113,14 @@ function tabsHtml(){
     ['period', isEn ? 'Period Analysis' : 'تحليل الفترات','📈'],
     ['charts', isEn ? 'Charts' : 'الرسوم البيانية','📊'],
     ['branchpeaks', isEn ? 'Daily Branch Peaks' : 'ذروة الفروع اليومية','⏰'],
+    ['smart', isEn ? 'Smart Analysis' : 'تحليل ذكي','🧠'],
     ['branches', isEn ? 'Branches' : 'الفروع','🏬'],
     ['drivers', isEn ? 'Drivers' : 'الطيارين','🛵'],
     ['platforms', isEn ? 'Platforms' : 'المنصات','📱'],
     ['areas', isEn ? 'Areas' : 'المناطق','📍'],
     ['customers', isEn ? 'Customers' : 'العملاء','👥'],
     ['kpi','KPI','🎯'],
+    ['audit', isEn ? 'Audit Log' : 'سجل الحركات','🧾'],
     ['settings', isEn ? 'Settings' : 'الإعدادات','⚙️']
   ];
   const viewerTabs=[
@@ -2023,6 +2128,7 @@ function tabsHtml(){
     ['period', isEn ? 'Period Analysis' : 'تحليل الفترات','📈'],
     ['charts', isEn ? 'Charts' : 'الرسوم البيانية','📊'],
     ['branchpeaks', isEn ? 'Daily Branch Peaks' : 'ذروة الفروع اليومية','⏰'],
+    ['smart', isEn ? 'Smart Analysis' : 'تحليل ذكي','🧠'],
     ['branches', isEn ? 'Branches' : 'الفروع','🏬'],
     ['drivers', isEn ? 'Drivers' : 'الطيارين','🛵'],
     ['platforms', isEn ? 'Platforms' : 'المنصات','📱'],
@@ -2033,7 +2139,7 @@ function tabsHtml(){
   const tabs = isAdmin() ? adminTabs : viewerTabs;
   return tabs.map(t=>`<button class="tab ${state.activeTab===t[0]?'active':''}" onclick="setTab('${t[0]}')"><span class="tab-icon">${t[2]}</span><span class="tab-label">${t[1]}</span></button>`).join('');
 }
-function setTab(t){ if(t==='settings' && !isAdmin()) return; if(t==='manager' || t==='insights' || t==='rankings' || t==='payments' || t==='preparers') t='overview'; state.activeTab=t; render()}
+function setTab(t){ if((t==='settings' || t==='audit') && !isAdmin()) return; if(t==='manager' || t==='insights' || t==='rankings' || t==='payments' || t==='preparers') t='overview'; state.activeTab=t; render()}
 
 
 function renderLineChart(items, labelKey, valueKey, suffix=''){
@@ -2115,6 +2221,22 @@ function renderBars(items, labelKey, valueKey, suffix=''){
   }).join('')}</div>`;
 }
 
+
+function renderSignedBars(items, labelKey, valueKey, suffix=''){
+  if(!items || !items.length) return '<div class="muted">لا توجد بيانات لهذا الجزء</div>';
+  const values = items.map(x=>Math.abs(Number(x[valueKey]||0)));
+  const max = Math.max(...values, 1);
+  return `<div class="chart-list">${items.map(it=>{
+    const raw = Number(it[valueKey]||0);
+    const abs = Math.abs(raw);
+    const w = Math.max(3, (abs/max)*100);
+    const isDown = raw < 0;
+    const color = isDown ? 'linear-gradient(90deg,#f97316,#ef4444)' : 'linear-gradient(90deg,var(--brand),var(--brand3))';
+    const sign = raw > 0 ? '+' : (raw < 0 ? '-' : '');
+    return `<div class="chart-row"><div>${it[labelKey]||''}</div><div class="chart-bar-wrap"><div class="chart-bar" style="width:${w}%;background:${color}"></div></div><div>${sign}${money(abs)}${suffix}</div></div>`;
+  }).join('')}</div>`;
+}
+
 function monthlyCompareCard(c){if(c.monthlyOrders.length<2) return '<div class="note">No Data كافية للمقارنة الشهرية.</div>'; const cur=c.monthlyOrders[c.monthlyOrders.length-1], prev=c.monthlyOrders[c.monthlyOrders.length-2], salesDiff=cur.sales-prev.sales, ordersDiff=cur.orders-prev.orders, cancelDiff=cur.cancelRate-prev.cancelRate; return `<div class="tableWrap"><table><thead><tr><th>المقارنة</th><th>${prev.month}</th><th>${cur.month}</th><th>الفرق</th></tr></thead><tbody><tr><td>الطلبات</td><td>${prev.orders}</td><td>${cur.orders}</td><td>${ordersDiff}</td></tr><tr><td>المبيعات</td><td>${money(prev.sales)}</td><td>${money(cur.sales)}</td><td>${money(salesDiff)}</td></tr><tr><td>نسبة الإلغاء</td><td>${prev.cancelRate.toFixed(1)}%</td><td>${cur.cancelRate.toFixed(1)}%</td><td>${cancelDiff.toFixed(1)}%</td></tr></tbody></table></div>`}
 function safeId(value){
   return String(value||'').replace(/[^a-zA-Z0-9؀-ۿ_-]/g,'_');
@@ -2142,6 +2264,150 @@ function applyAllMonthlyTargets(){
   document.getElementById('msg').textContent = 'تم تطبيق ' + count + ' هدف شهري بنجاح';
   render();
 }
+
+function h(v){return String(v ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function ensureBranchAliases(){
+  if(!state.settings) state.settings={};
+  if(!state.settings.branchAliases || typeof state.settings.branchAliases !== 'object' || Array.isArray(state.settings.branchAliases)) state.settings.branchAliases={};
+  return state.settings.branchAliases;
+}
+function cleanBranchName(v){return String(v||'').trim();}
+function mapBranchName(name){
+  const n=cleanBranchName(name);
+  if(!n) return '';
+  const aliases=ensureBranchAliases();
+  let current=n;
+  const seen=new Set();
+  for(let i=0;i<6;i++){
+    if(seen.has(current)) break;
+    seen.add(current);
+    const next=cleanBranchName(aliases[current]);
+    if(!next || next===current) break;
+    current=next;
+  }
+  return current;
+}
+function rawBranchForCalc(o){
+  if(!o) return '';
+  const raw = o.originalBranch || o.rawBranch || o.branch || '';
+  return standardizeBranchName(raw);
+}
+function branchForCalc(o){
+  return mapBranchName(rawBranchForCalc(o));
+}
+function groupedOrdersForTargets(){return (state.orders||[]).map(o=>({...o, branch: branchForCalc(o)}));}
+function migrateBranchTargets(child,parent){
+  child=cleanBranchName(child); parent=cleanBranchName(parent);
+  if(!child || !parent || child===parent) return;
+  if(!state.settings.monthlySalesTargets) state.settings.monthlySalesTargets={};
+  const targets=state.settings.monthlySalesTargets;
+  if(targets[child]){
+    if(!targets[parent]) targets[parent]={};
+    Object.keys(targets[child]).forEach(m=>{
+      const childVal=parseTargetNumber(targets[child][m]);
+      const parentVal=parseTargetNumber(targets[parent][m]);
+      if(!parentVal && childVal) targets[parent][m]=childVal;
+    });
+    delete targets[child];
+  }
+}
+function allBranchSettingOptions(){
+  const set=new Set();
+  (state.orders||[]).forEach(o=>{ if(o.branch) set.add(String(o.branch)); if(o.originalBranch) set.add(String(o.originalBranch)); });
+  const aliases=ensureBranchAliases();
+  Object.keys(aliases).forEach(k=>set.add(k));
+  Object.values(aliases).forEach(v=>{ if(v) set.add(String(v)); });
+  ['فرع مدينة نصر','فرع مصر الجديدة','فرع التجمع الاول','فرع التجمع الخامس','فرع المعادي'].forEach(x=>set.add(x));
+  return [...set].filter(Boolean).sort();
+}
+function addBranchAlias(){
+  const child=cleanBranchName(document.getElementById('branchAliasChild')?.value);
+  const parent=cleanBranchName(document.getElementById('branchAliasParent')?.value);
+  if(!child || !parent){document.getElementById('msg').textContent='اكتب اسم الفرع الجديد والفرع الرئيسي.'; return;}
+  if(child===parent){document.getElementById('msg').textContent='لا يمكن ربط الفرع بنفسه.'; return;}
+  const aliases=ensureBranchAliases();
+  if(mapBranchName(parent)===child){document.getElementById('msg').textContent='لا يمكن إنشاء ربط دائري بين الفروع.'; return;}
+  aliases[child]=parent;
+  migrateBranchTargets(child,parent);
+  saveSettings();
+  document.getElementById('msg').textContent='تم حفظ ربط الفرع وتحديث التارجت. اضغط تطبيق على البيانات الحالية لو عايز يندمج فورًا.';
+  render();
+}
+function deleteBranchAlias(child){
+  child=cleanBranchName(child);
+  const aliases=ensureBranchAliases();
+  if(!child || !Object.prototype.hasOwnProperty.call(aliases, child)){
+    document.getElementById('msg').textContent='لم يتم العثور على الربط المطلوب حذفه.';
+    return;
+  }
+  if(!confirm('هل تريد حذف ربط الفرع: ' + child + ' ؟')) return;
+  delete aliases[child];
+  saveSettings();
+  document.getElementById('msg').textContent='تم حذف ربط الفرع. الفروع الأصلية ستظهر مرة أخرى في الفلاتر والتارجت بعد التحديث. اضغط حفظ أونلاين الآن لتحديث باقي الأجهزة.';
+  render();
+}
+
+function restoreOriginalBranchNames(){
+  let restored=0, missing=0;
+  (state.orders||[]).forEach(o=>{
+    const original = cleanBranchName(o.originalBranch || o.rawBranch || '');
+    if(original){
+      const std = standardizeBranchName(original);
+      if(std && o.branch !== std){ o.branch = std; restored++; }
+      if(o.displayBranch) delete o.displayBranch;
+    }else{
+      missing++;
+    }
+  });
+  state.settings.branchAliases = {};
+  saveSettings();
+  const msgEl=document.getElementById('msg');
+  if(restored){
+    msgEl.textContent='تم استرجاع أسماء الفروع الأصلية من بيانات Excel المحفوظة. اضغط حفظ أونلاين الآن لتحديث باقي الأجهزة.';
+  }else if(missing){
+    msgEl.textContent='لا توجد أسماء فروع أصلية محفوظة في البيانات الحالية. الحل: ارفع ملف Excel الأصلي مرة أخرى باستخدام Replace Current Data.';
+  }else{
+    msgEl.textContent='لا توجد بيانات تحتاج استرجاع.';
+  }
+  render();
+}
+
+function clearAllBranchAliases(){
+  const aliases=ensureBranchAliases();
+  const count=Object.keys(aliases).length;
+  if(!count){document.getElementById('msg').textContent='لا توجد روابط فروع للحذف.'; return;}
+  if(!confirm('سيتم حذف كل روابط تجميع الفروع. هل أنت متأكد؟')) return;
+  state.settings.branchAliases={};
+  saveSettings();
+  document.getElementById('msg').textContent='تم حذف كل روابط تجميع الفروع. الفروع الأصلية ستظهر مرة أخرى في الفلاتر والتارجت بعد التحديث. اضغط حفظ أونلاين الآن لتحديث باقي الأجهزة.';
+  render();
+}
+async function applyBranchAliasesToCurrentData(){
+  const aliases=ensureBranchAliases();
+  const before=(state.orders||[]).filter(o=>aliases[rawBranchForCalc(o)] || aliases[o.branch]).length;
+  // لا نغير اسم الفرع الأصلي داخل البيانات حتى يمكن الرجوع بعد حذف الربط.
+  // التجميع أصبح افتراضيًا في الفلاتر، التقارير، والتارجت حسب الإعداد الحالي.
+  await saveCloudState(true);
+  document.getElementById('msg').textContent='تم تطبيق تجميع الفروع على العرض والتقارير' + (before ? ' ('+before+' سجل متأثر).' : '.');
+  render();
+}
+function renderBranchAliasSettings(){
+  const aliases=ensureBranchAliases();
+  const options=allBranchSettingOptions().map(x=>`<option value="${h(x)}"></option>`).join('');
+  const rows=Object.entries(aliases).map(([child,parent])=>`<tr><td>${h(child)}</td><td>${h(parent)}</td><td><button class="btn btn-outline" data-child="${h(child)}" onclick="deleteBranchAlias(this.dataset.child)">حذف</button></td></tr>`).join('');
+  return `<div class="card" style="margin-top:16px">
+    <div class="section-title"><h3 style="margin:0">تجميع الفروع تحت فرع رئيسي</h3><div class="toolbar" style="justify-content:flex-start"><button class="btn btn-primary" onclick="applyBranchAliasesToCurrentData()">تطبيق على العرض فقط</button><button class="btn btn-outline" onclick="restoreOriginalBranchNames()">استرجاع أسماء الفروع الأصلية</button><button class="btn btn-outline" onclick="clearAllBranchAliases()">حذف كل الروابط</button></div></div>
+    <div class="small muted" style="margin-bottom:10px">استخدمها لو عندك فرع جديد أو اسم فرع مختلف وعايز يظهر داخل فرع رئيسي في الفلاتر والتقارير. مثال: Dark Store تحت فرع مدينة نصر.</div>
+    <datalist id="branchAliasOptions">${options}</datalist>
+    <div class="toolbar" style="align-items:flex-end">
+      <label style="display:grid;gap:6px;min-width:220px"><span class="small muted">الفرع الجديد / الاسم الموجود في Excel</span><input id="branchAliasChild" class="input" list="branchAliasOptions" placeholder="مثال: Dark Store"></label>
+      <label style="display:grid;gap:6px;min-width:220px"><span class="small muted">يتحسب تحت فرع</span><input id="branchAliasParent" class="input" list="branchAliasOptions" placeholder="مثال: فرع مدينة نصر"></label>
+      <button class="btn btn-primary" onclick="addBranchAlias()">إضافة الربط</button>
+    </div>
+    <div class="tableWrap" style="margin-top:12px"><table><thead><tr><th>الفرع الجديد / الاسم</th><th>الفرع الرئيسي</th><th>إجراء</th></tr></thead><tbody>${rows || `<tr><td colspan="3">لا توجد روابط فروع حتى الآن.</td></tr>`}</tbody></table></div>
+  </div>`;
+}
+
 function changePassword(){const v=document.getElementById('newPass').value.trim(); if(!v) return; state.settings.password=v; saveSettings(); document.getElementById('msg').textContent='تم تغيير كلمة مرور Admin.'; document.getElementById('newPass').value=''}
 function changeViewerPassword(){const v=document.getElementById('newViewerPass').value.trim(); if(!v) return; state.settings.viewerPassword=v; saveSettings(); document.getElementById('msg').textContent='تم تغيير كلمة مرور Viewer.'; document.getElementById('newViewerPass').value=''}
 function saveAlertSettings(){state.settings.alertThresholds.cancelRate=Number(document.getElementById('cancelThreshold').value||10); saveSettings(); document.getElementById('msg').textContent='تم حفظ إعدادات التنبيه.'; render()}
@@ -2166,7 +2432,7 @@ function monthlyTargetHistoryRows(c){
   (c.branches||[]).forEach(b=>{
     monthKeys.forEach(monthKey=>{
       const target = getMonthlyTarget(b.name, monthKey);
-      const monthRows = (state.orders||[]).filter(o=>o.branch===b.name && getMonthKeyFromRowDate(o.orderDate)===monthKey && o.status==="تم");
+      const monthRows = groupedOrdersForTargets().filter(o=>o.branch===b.name && getMonthKeyFromRowDate(o.orderDate)===monthKey && o.status==="تم");
       const achieved = monthRows.reduce((s,o)=>s+Number(o.amount||0),0);
       const pct = target ? (achieved/target)*100 : 0;
       rows.push({
@@ -2195,7 +2461,7 @@ function renderSettingsTab(c){
   const targetsRows=(c.branches||[]).map(b=>{
     const monthCells = monthKeys.map(monthKey=>{
       const targetVal=getMonthlyTarget(b.name, monthKey);
-      const achieved=(state.orders||[]).filter(o=>o.branch===b.name && getMonthKeyFromRowDate(o.orderDate)===monthKey && o.status==="تم").reduce((s,o)=>s+Number(o.amount||0),0);
+      const achievedRows = groupedOrdersForTargets().filter(o=>o.branch===b.name && getMonthKeyFromRowDate(o.orderDate)===monthKey && o.status==="تم"); const achieved=achievedRows.reduce((s,o)=>s+Number(o.amount||0),0);
       const pct=targetVal?(achieved/targetVal)*100:0;
       return `<td>
         <div style="display:grid;gap:6px">
@@ -2215,6 +2481,7 @@ function renderSettingsTab(c){
     <div class="card"><div class="section-title"><h3 style="margin:0">كلمة مرور Viewer</h3></div><div class="toolbar"><input id="newViewerPass" class="input" type="password" placeholder="كلمة مرور الإدارة / العرض"><button class="btn btn-primary" onclick="changeViewerPassword()">حفظ</button></div><div class="small muted" style="margin-top:10px">تستخدم للعرض فقط بدون رفع أو تعديل.</div></div>
   </div>
   <div class="card" style="margin-top:16px"><div class="section-title"><h3 style="margin:0">إعدادات التنبيه</h3></div><div class="toolbar"><input id="cancelThreshold" class="input" type="number" value="${state.settings.alertThresholds.cancelRate||10}" placeholder="حد نسبة الإلغاء"><button class="btn btn-primary" onclick="saveAlertSettings()">حفظ التنبيه</button></div></div>
+  ${renderBranchAliasSettings()}
   <div class="card">
     <div class="section-title"><h3 style="margin:0">أهداف مبيعات الفروع حسب الشهر</h3><button class="btn btn-primary" onclick="applyAllMonthlyTargets()">تطبيق كل الأهداف الشهرية</button></div>
     <div class="small muted" style="margin-bottom:10px">اكتب تارجت كل فرع لكل شهر ثم اضغط "تطبيق كل الأهداف الشهرية". سيبقى محفوظًا، وستشوف حقق منه كام وAchievement Rate لكل شهر.</div>
@@ -2820,6 +3087,37 @@ function setBranchPeakSelected(branch){
   state.branchPeakSelected = branch || '';
   render();
 }
+
+function weekdayPeakAnalysisRows(rows, selectedBranch){
+  const map = {};
+  (rows || []).forEach(o=>{
+    if(selectedBranch && selectedBranch !== 'كل الفروع' && o.branch !== selectedBranch) return;
+    const date = String(o.orderDate || '').slice(0,10);
+    if(!date) return;
+    const dayName = boardWeekdayName(date);
+    if(dayName === '—') return;
+    if(!map[dayName]) map[dayName] = {name:dayName, orders:0, completed:0, canceled:0, sales:0, dates:{}};
+    const g = map[dayName];
+    g.orders++;
+    g.dates[date] = (g.dates[date] || 0) + 1;
+    if(o.status === 'تم'){
+      g.completed++;
+      g.sales += Number(o.amount || 0);
+    } else if(o.status === 'ملغي / مرتجع'){
+      g.canceled++;
+    }
+  });
+  const weekdayOrderAr = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+  const weekdayOrderEn = ['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday'];
+  const order = brLang() === 'en' ? weekdayOrderEn : weekdayOrderAr;
+  return Object.values(map).map(g=>({
+    ...g,
+    daysCount: Object.keys(g.dates).length,
+    avgDailyOrders: Object.keys(g.dates).length ? g.orders / Object.keys(g.dates).length : 0,
+    avgOrder: g.completed ? g.sales / g.completed : 0,
+    cancelRate: g.orders ? (g.canceled / g.orders) * 100 : 0
+  })).sort((a,b)=>b.orders-a.orders || order.indexOf(a.name)-order.indexOf(b.name));
+}
 function branchPeakByDayHtml(rows){
   const branchMap = buildBranchDailyHourlyData(rows);
   const allBranches = Object.keys(branchMap).sort();
@@ -3026,6 +3324,11 @@ function branchPeaksProfessionalHtml(rows){
   const topDays = [...p.dayRows].sort((a,b)=>b.total-a.total).slice(0,10);
   const maxDayValue = Math.max(1, ...topDays.map(x=>x.total));
   const recentDays = [...p.dayRows].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,14);
+  const weekdayRows = weekdayPeakAnalysisRows(rows, p.selectedBranch);
+  const maxWeekdayOrders = Math.max(1, ...weekdayRows.map(x=>x.orders));
+  const bestWeekdayByOrders = weekdayRows[0] || null;
+  const bestWeekdayBySales = [...weekdayRows].sort((a,b)=>b.sales-a.sales || b.orders-a.orders)[0] || null;
+  const lowestWeekdayByOrders = [...weekdayRows].sort((a,b)=>a.orders-b.orders)[0] || null;
 
   return `
   <div class="branchpeaks-wrap">
@@ -3099,6 +3402,55 @@ function branchPeaksProfessionalHtml(rows){
     </div>
 
     <div class="card branchpeaks-table">
+      <div class="section-title"><h3 style="margin:0">تحليل أيام الأسبوع</h3></div>
+      <div class="note" style="margin-bottom:12px">يعرض عدد الأوردرات لكل يوم أسبوع داخل الفترة والفلاتر المختارة، عشان تعرف السبت كام أوردر، الأحد كام أوردر، وأعلى يوم ضغط.</div>
+      <div class="peak-kpi-grid" style="margin-bottom:16px">
+        <div class="peak-kpi"><div class="label">أعلى يوم أوردرات</div><div class="value">${bestWeekdayByOrders ? bestWeekdayByOrders.name : '—'}</div><div class="sub">${bestWeekdayByOrders ? bestWeekdayByOrders.orders + ' أوردر' : '—'}</div></div>
+        <div class="peak-kpi"><div class="label">أفضل يوم مبيعات</div><div class="value">${bestWeekdayBySales ? bestWeekdayBySales.name : '—'}</div><div class="sub">${bestWeekdayBySales ? money(bestWeekdayBySales.sales) : '—'}</div></div>
+        <div class="peak-kpi"><div class="label">أقل يوم أوردرات</div><div class="value">${lowestWeekdayByOrders ? lowestWeekdayByOrders.name : '—'}</div><div class="sub">${lowestWeekdayByOrders ? lowestWeekdayByOrders.orders + ' أوردر' : '—'}</div></div>
+      </div>
+      <div class="branchpeaks-bars" style="margin-bottom:16px">
+        ${weekdayRows.map(d=>`
+          <div class="branchpeaks-row day">
+            <div class="branchpeaks-label">${d.name}</div>
+            <div class="branchpeaks-track"><div class="branchpeaks-fill" style="width:${(d.orders/maxWeekdayOrders)*100}%"></div></div>
+            <div class="branchpeaks-num">${d.orders} طلب</div>
+          </div>`).join('') || '<div class="note">لا توجد بيانات أيام أسبوع داخل الفترة المختارة.</div>'}
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الترتيب</th>
+              <th>اليوم</th>
+              <th>عدد الأوردرات</th>
+              <th>الأوردرات المكتملة</th>
+              <th>إجمالي المبيعات</th>
+              <th>متوسط الأوردر</th>
+              <th>عدد الأيام الفعلية</th>
+              <th>متوسط الأوردرات اليومية</th>
+              <th>نسبة الإلغاء</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${weekdayRows.map((d,i)=>`
+              <tr>
+                <td class="num-cell">${i+1}</td>
+                <td>${d.name}</td>
+                <td class="num-cell">${d.orders}</td>
+                <td class="num-cell">${d.completed}</td>
+                <td class="num-cell">${money(d.sales)}</td>
+                <td class="num-cell">${money(d.avgOrder)}</td>
+                <td class="num-cell">${d.daysCount}</td>
+                <td class="num-cell">${d.avgDailyOrders.toFixed(1)}</td>
+                <td class="num-cell">${d.cancelRate.toFixed(1)}%</td>
+              </tr>`).join('') || '<tr><td colspan="9">No Data</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card branchpeaks-table">
       <div class="section-title"><h3 style="margin:0">تقرير الذروة اليومي</h3></div><div class="note" style="margin-bottom:12px">يعرض هذا التقرير كل يوم على حدة: إجمالي الطلبات، ساعة الذروة لذلك اليوم، وعدد الطلبات داخل ساعة الذروة.</div>
       <div class="tableWrap">
         <table>
@@ -3129,6 +3481,236 @@ function branchPeaksProfessionalHtml(rows){
 }
 
 
+
+
+function weekdayHourMatrixRows(rows, selectedBranch){
+  const weekdayOrderAr = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+  const weekdayOrderEn = ['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday'];
+  const order = brLang() === 'en' ? weekdayOrderEn : weekdayOrderAr;
+  const hours = Array.from({length:24}, (_,i)=>String(i).padStart(2,'0')+':00');
+  const map = {};
+  (rows || []).forEach(o=>{
+    if(selectedBranch && selectedBranch !== 'كل الفروع' && o.branch !== selectedBranch) return;
+    const date = String(o.orderDate || '').slice(0,10);
+    if(!date) return;
+    const dayName = boardWeekdayName(date);
+    const hour = hourLabel(o.orderTime);
+    if(dayName === '—' || !hour || hour === ':00') return;
+    if(!map[dayName]) map[dayName] = {name:dayName, total:0, sales:0, hours:{}, dates:{}};
+    map[dayName].total++;
+    map[dayName].dates[date] = true;
+    map[dayName].hours[hour] = (map[dayName].hours[hour] || 0) + 1;
+    if(o.status === 'تم') map[dayName].sales += Number(o.amount || 0);
+  });
+  return order.map(name=>{
+    const g = map[name] || {name,total:0,sales:0,hours:{},dates:{}};
+    const best = Object.entries(g.hours).sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]))[0] || ['—',0];
+    return {...g, bestHour:best[0], bestHourOrders:Number(best[1]||0), daysCount:Object.keys(g.dates||{}).length};
+  }).filter(x=>x.total>0);
+}
+
+function weekdayHourMatrixHtml(rows, selectedBranch){
+  const matrix = weekdayHourMatrixRows(rows, selectedBranch);
+  if(!matrix.length) return '<div class="card"><div class="section-title"><h3 style="margin:0">تحليل الساعة داخل كل يوم أسبوع</h3></div><div class="note">لا توجد بيانات كافية لعرض تحليل الساعة حسب أيام الأسبوع.</div></div>';
+  const hours = Array.from({length:24}, (_,i)=>String(i).padStart(2,'0')+':00');
+  const usedHours = hours.filter(h=>matrix.some(d=>Number(d.hours[h]||0)>0));
+  const maxVal = Math.max(1, ...matrix.flatMap(d=>usedHours.map(h=>Number(d.hours[h]||0))));
+  const bestOverall = matrix.slice().sort((a,b)=>b.bestHourOrders-a.bestHourOrders || b.total-a.total)[0] || null;
+  return `
+    <div class="card branchpeaks-table">
+      <div class="section-title"><h3 style="margin:0">تحليل الذروة بالساعة داخل أيام الأسبوع</h3></div>
+      <div class="note" style="margin-bottom:12px">يعرض أي ساعة هي الأقوى داخل كل يوم أسبوع. مثال: السبت الساعة 7 مساءً جاب كام أوردر، والأحد الساعة كام كان أعلى ضغط.</div>
+      <div class="peak-kpi-grid" style="margin-bottom:16px">
+        <div class="peak-kpi"><div class="label">أقوى يوم + ساعة</div><div class="value">${bestOverall ? bestOverall.name : '—'}</div><div class="sub">${bestOverall ? to12HourLabel(bestOverall.bestHour) + ' — ' + bestOverall.bestHourOrders + ' أوردر' : '—'}</div></div>
+        <div class="peak-kpi"><div class="label">عدد أيام الأسبوع المتاحة</div><div class="value">${matrix.length}</div><div class="sub">حسب الفترة والفلاتر الحالية</div></div>
+        <div class="peak-kpi"><div class="label">أكبر إجمالي يومي أسبوعي</div><div class="value">${matrix.slice().sort((a,b)=>b.total-a.total)[0]?.name || '—'}</div><div class="sub">${matrix.slice().sort((a,b)=>b.total-a.total)[0]?.total || 0} أوردر</div></div>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>اليوم</th><th>إجمالي الأوردرات</th><th>أقوى ساعة</th><th>أوردرات أقوى ساعة</th><th>عدد الأيام الفعلية</th>
+              ${usedHours.map(h=>`<th>${to12HourLabel(h)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${matrix.map(d=>`<tr>
+              <td>${d.name}</td>
+              <td class="num-cell">${d.total}</td>
+              <td class="num-cell">${to12HourLabel(d.bestHour)}</td>
+              <td class="num-cell">${d.bestHourOrders}</td>
+              <td class="num-cell">${d.daysCount}</td>
+              ${usedHours.map(h=>{
+                const v = Number(d.hours[h] || 0);
+                const opacity = v ? Math.max(.12, v/maxVal).toFixed(2) : '0';
+                return `<td class="num-cell" style="background:rgba(236,72,153,${opacity})">${v || ''}</td>`;
+              }).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function monthKeyLabel(m){ return m || '—'; }
+function monthRowsForCompare(data, monthKey){
+  return (data||[]).filter(o=>String(o.orderDate||'').slice(0,7) === monthKey);
+}
+function summarizeRowsForCompare(rows){
+  const done = rows.filter(x=>x.status==='تم');
+  const canceled = rows.filter(x=>x.status==='ملغي / مرتجع');
+  const sales = done.reduce((s,x)=>s+Number(x.amount||0),0);
+  return {orders:rows.length, completed:done.length, canceled:canceled.length, sales, avg:done.length?sales/done.length:0, cancelRate:rows.length?(canceled.length/rows.length)*100:0};
+}
+function pctDiff(cur, prev){ return prev ? ((cur - prev) / Math.abs(prev)) * 100 : (cur ? 100 : 0); }
+function diffCell(cur, prev, moneyMode=false){
+  const diff = cur - prev;
+  const pct = pctDiff(cur, prev);
+  const cls = diff >= 0 ? 'ok' : 'bad';
+  const sign = diff > 0 ? '+' : '';
+  return `<span class="badge ${cls}">${sign}${moneyMode ? money(diff) : diff.toFixed(0)} / ${sign}${pct.toFixed(1)}%</span>`;
+}
+function advancedMonthCompareHtml(c){
+  const months = (c.monthlyOrders||[]).map(x=>x.month).sort();
+  if(months.length < 2) return `<div class="card"><div class="section-title"><h3 style="margin:0">مقارنة شهر بشهر</h3></div><div class="note">لا توجد شهور كافية للمقارنة. ارفع بيانات شهرين على الأقل.</div></div>`;
+  const curMonth = months[months.length-1];
+  const prevMonth = months[months.length-2];
+  const curRows = monthRowsForCompare(c.data, curMonth);
+  const prevRows = monthRowsForCompare(c.data, prevMonth);
+  const cur = summarizeRowsForCompare(curRows);
+  const prev = summarizeRowsForCompare(prevRows);
+  const branchNames = [...new Set([...curRows, ...prevRows].map(x=>x.branch).filter(Boolean))].sort();
+  const branchRows = branchNames.map(branch=>{
+    const cr = summarizeRowsForCompare(curRows.filter(x=>x.branch===branch));
+    const pr = summarizeRowsForCompare(prevRows.filter(x=>x.branch===branch));
+    return {branch, cur:cr, prev:pr, salesDiff:cr.sales-pr.sales, ordersDiff:cr.orders-pr.orders, salesPct:pctDiff(cr.sales, pr.sales), ordersPct:pctDiff(cr.orders, pr.orders)};
+  }).sort((a,b)=>b.salesDiff-a.salesDiff);
+  const bestGrow = branchRows.slice().sort((a,b)=>b.salesPct-a.salesPct)[0] || null;
+  const worstDrop = branchRows.slice().sort((a,b)=>a.salesPct-b.salesPct)[0] || null;
+  return `
+    <div class="card">
+      <div class="section-title"><h3 style="margin:0">مقارنة شهر بشهر: ${monthKeyLabel(prevMonth)} vs ${monthKeyLabel(curMonth)}</h3></div>
+      <div class="peak-kpi-grid">
+        <div class="peak-kpi"><div class="label">فرق المبيعات</div><div class="value">${money(cur.sales-prev.sales)}</div><div class="sub">${pctDiff(cur.sales,prev.sales).toFixed(1)}%</div></div>
+        <div class="peak-kpi"><div class="label">فرق الأوردرات</div><div class="value">${cur.orders-prev.orders}</div><div class="sub">${pctDiff(cur.orders,prev.orders).toFixed(1)}%</div></div>
+        <div class="peak-kpi"><div class="label">أفضل فرع نموًا</div><div class="value">${bestGrow ? bestGrow.branch : '—'}</div><div class="sub">${bestGrow ? bestGrow.salesPct.toFixed(1)+'%' : '—'}</div></div>
+        <div class="peak-kpi"><div class="label">أكبر فرع تراجعًا</div><div class="value">${worstDrop ? worstDrop.branch : '—'}</div><div class="sub">${worstDrop ? worstDrop.salesPct.toFixed(1)+'%' : '—'}</div></div>
+      </div>
+      <div class="grid2eq" style="margin-top:16px">
+        <div>
+          <div class="note" style="margin-bottom:8px">الفروع الأعلى نموًا في المبيعات</div>
+          ${renderSignedBars(branchRows.filter(x=>x.salesDiff>0).sort((a,b)=>b.salesDiff-a.salesDiff).slice(0,8).map(x=>({name:x.branch, value:x.salesDiff})), 'name', 'value')}
+        </div>
+        <div>
+          <div class="note" style="margin-bottom:8px">الفروع الأكثر تراجعًا في المبيعات</div>
+          ${renderSignedBars(branchRows.filter(x=>x.salesDiff<0).sort((a,b)=>a.salesDiff-b.salesDiff).slice(0,8).map(x=>({name:x.branch, value:x.salesDiff})), 'name', 'value')}
+        </div>
+      </div>
+      <div class="tableWrap" style="margin-top:16px">
+        <table><thead><tr><th>الفرع</th><th>مبيعات الشهر السابق</th><th>مبيعات الشهر الحالي</th><th>فرق المبيعات</th><th>أوردرات السابق</th><th>أوردرات الحالي</th><th>فرق الأوردرات</th><th>نسبة الإلغاء الحالية</th></tr></thead>
+        <tbody>${branchRows.map(x=>`<tr><td>${x.branch}</td><td class="num-cell">${money(x.prev.sales)}</td><td class="num-cell">${money(x.cur.sales)}</td><td class="num-cell">${diffCell(x.cur.sales,x.prev.sales,true)}</td><td class="num-cell">${x.prev.orders}</td><td class="num-cell">${x.cur.orders}</td><td class="num-cell">${diffCell(x.cur.orders,x.prev.orders,false)}</td><td class="num-cell">${x.cur.cancelRate.toFixed(1)}%</td></tr>`).join('')}</tbody></table>
+      </div>
+    </div>`;
+}
+
+function daysInMonthKey(monthKey){
+  const [y,m] = String(monthKey||'').split('-').map(Number);
+  if(!y || !m) return 30;
+  return new Date(y, m, 0).getDate();
+}
+function monthKeyParts(monthKey){
+  const [y,m] = String(monthKey||'').split('-').map(Number);
+  return {year:y||0, month:m||0};
+}
+function currentMonthKeyLocal(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function targetForecastPeriod(monthKey){
+  const totalDays = daysInMonthKey(monthKey);
+  const {year, month} = monthKeyParts(monthKey);
+  const now = new Date();
+  const currentKey = currentMonthKeyLocal();
+  let elapsedDays = totalDays;
+  let remainingDays = 0;
+  let mode = 'past';
+  if(monthKey === currentKey){
+    elapsedDays = Math.min(totalDays, Math.max(1, now.getDate()));
+    remainingDays = Math.max(0, totalDays - elapsedDays);
+    mode = 'current';
+  }else if(year && month){
+    const monthStart = new Date(year, month-1, 1);
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    if(monthStart > thisMonthStart){
+      elapsedDays = 0;
+      remainingDays = totalDays;
+      mode = 'future';
+    }
+  }
+  return {totalDays, elapsedDays, remainingDays, mode};
+}
+function smartTargetForecastRows(c){
+  const months = (c.monthlyOrders||[]).map(x=>x.month).sort();
+  const activeMonth = months.includes(currentMonthKeyLocal()) ? currentMonthKeyLocal() : (months[months.length-1] || '');
+  if(!activeMonth) return [];
+  const period = targetForecastPeriod(activeMonth);
+  const monthRows = monthRowsForCompare(c.data, activeMonth);
+  const branchNames = [...new Set([
+    ...(c.branches||[]).map(b=>b.name).filter(Boolean),
+    ...monthRows.map(x=>x.branch).filter(Boolean),
+    ...Object.keys(state.settings.monthlySalesTargets||{})
+  ])].sort();
+  return branchNames.map(branch=>{
+    const target = getMonthlyTarget(branch, activeMonth);
+    if(!target) return null;
+    const rows = monthRows.filter(x=>x.branch===branch);
+    const s = summarizeRowsForCompare(rows);
+    const elapsedForAvg = Math.max(1, period.elapsedDays || 1);
+    const dailyAvg = s.sales / elapsedForAvg;
+    const forecast = period.mode === 'future' ? 0 : dailyAvg * period.totalDays;
+    const needed = Math.max(0, Number(target||0) - s.sales);
+    const neededDaily = period.remainingDays > 0 ? needed / period.remainingDays : needed;
+    const achievedPct = target ? (s.sales/target)*100 : 0;
+    const forecastPct = target ? (forecast / target) * 100 : 0;
+    let status = 'على الخطة';
+    if(period.mode === 'past') status = achievedPct >= 100 ? 'تم تحقيقه' : 'لم يتحقق';
+    else if(forecastPct < 80) status = 'خطر'; else if(forecastPct < 100) status = 'متابعة';
+    return {branch, activeMonth, target, sales:s.sales, achievedPct, forecast, forecastPct, needed, neededDaily, dailyAvg, status, totalDays:period.totalDays, elapsedDays:period.elapsedDays, remainingDays:period.remainingDays, periodMode:period.mode};
+  }).filter(Boolean).sort((a,b)=>a.forecastPct-b.forecastPct);
+}
+function smartAlertsForecastHtml(c){
+  const alerts = [];
+  (c.branches||[]).forEach(b=>{
+    if(b.target && (b.targetPct||0) < 70) alerts.push({type:'خطر تارجت', branch:b.name, msg:`تحقيق التارجت ${Number(b.targetPct||0).toFixed(1)}% فقط`, level:'bad'});
+    if((b.cancelRate||0) >= 15) alerts.push({type:'إلغاء مرتفع', branch:b.name, msg:`نسبة الإلغاء ${Number(b.cancelRate||0).toFixed(1)}%`, level:'bad'});
+    if((b.orders||0) < 10 && (c.totalAll||0) > 100) alerts.push({type:'حجم منخفض', branch:b.name, msg:'عدد الأوردرات منخفض مقارنة بالفترة', level:'warn'});
+  });
+  const forecastRows = smartTargetForecastRows(c);
+  forecastRows.filter(x=>x.forecastPct < 100).slice(0,6).forEach(x=>alerts.push({type:'توقع نهاية الشهر', branch:x.branch, msg:`متوقع ${x.forecastPct.toFixed(1)}% من التارجت`, level:x.forecastPct<80?'bad':'warn'}));
+  return `
+    <div class="card">
+      <div class="section-title"><h3 style="margin:0">Smart Alerts + توقع تحقيق التارجت</h3></div>
+      <div class="note" style="margin-bottom:12px">التوقع الآن مبني على الأيام الفعلية حتى تاريخ اليوم والأيام المتبقية حتى نهاية الشهر: المحقق حتى الآن + المطلوب يوميًا خلال الأيام المتبقية.</div>
+      <div class="grid2eq">
+        <div class="card" style="box-shadow:none"><div class="section-title"><h3 style="margin:0">التنبيهات الذكية</h3></div>
+          <div class="report-list">${alerts.length ? alerts.slice(0,12).map(a=>`<div class="report-item"><div class="t"><span class="badge ${a.level==='bad'?'bad':'warn'}">${a.type}</span> ${a.branch}</div><div class="sub">${a.msg}</div></div>`).join('') : '<div class="note">لا توجد تنبيهات خطرة حسب الفلاتر الحالية.</div>'}</div>
+        </div>
+        <div class="card" style="box-shadow:none"><div class="section-title"><h3 style="margin:0">أضعف توقعات التارجت</h3></div>
+          ${renderBars(forecastRows.slice(0,8).map(x=>({name:x.branch, pct:Math.min(100, Math.max(0,x.forecastPct))})), 'name', 'pct','%')}
+        </div>
+      </div>
+      <div class="tableWrap" style="margin-top:16px">
+        <table><thead><tr><th>الشهر</th><th>الفرع</th><th>أيام الشهر</th><th>الأيام الفعلية</th><th>الأيام المتبقية</th><th>التارجت</th><th>المحقق حتى الآن</th><th>المتبقي</th><th>متوسط يومي حالي</th><th>متوقع نهاية الشهر</th><th>نسبة متوقعة</th><th>المطلوب يوميًا للمتبقي</th><th>الحالة</th></tr></thead>
+        <tbody>${forecastRows.map(x=>`<tr><td>${monthKeyLabel(x.activeMonth)}</td><td>${x.branch}</td><td class="num-cell">${x.totalDays}</td><td class="num-cell">${x.elapsedDays}</td><td class="num-cell">${x.remainingDays}</td><td class="num-cell">${money(x.target)}</td><td class="num-cell">${money(x.sales)}</td><td class="num-cell">${money(x.needed)}</td><td class="num-cell">${money(x.dailyAvg)}</td><td class="num-cell">${money(x.forecast)}</td><td class="num-cell">${x.forecastPct.toFixed(1)}%</td><td class="num-cell">${money(x.neededDaily)}</td><td>${x.status}</td></tr>`).join('') || '<tr><td colspan="13">لا يوجد تارجت شهري للفروع داخل الفترة الحالية.</td></tr>'}</tbody></table>
+      </div>
+    </div>`;
+}
+function smartAnalysisHtml(c){
+  return `<div class="branchpeaks-wrap">
+    ${advancedMonthCompareHtml(c)}
+    ${smartAlertsForecastHtml(c)}
+  </div>`;
+}
 
 function renderAreasProfessional(c){
   const rows = (c.areas || []).slice(0, 50);
@@ -3380,14 +3962,69 @@ function boardRankingSummaryHtml(c){
 }
 
 
-function renderTabContent(c){
-  if(state.activeTab==='overview') return `${boardRankingSummaryHtml(c)}${monthlyVsPreviousHtml(c)}<div class="grid3"><div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Branch Performance':'أداء الفروع'}</h3></div>${progressList(c.branches.slice(0,6),'score','','branches')}</div><div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Areas by Completed Orders':'المناطق حسب الطلبات المكتملة'}</h3></div>${progressList(c.areas.slice(0,6),'orders',' طلب','areas')}</div><div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Top Platforms':'أفضل المنصات'}</h3></div>${progressList(c.platforms.slice(0,6),'sales','','platforms')}</div></div><div class="grid3"><div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Daily KPI for Management':'KPI يومي للإدارة'}</h3></div><div class="row"><span>Last Day Orders</span><strong>${c.daily.today.orders||0}</strong></div><div class="row"><span>Last Day Sales</span><strong>${money(c.daily.today.sales||0)}</strong></div><div class="row"><span>Last Day Cancellation</span><strong>${(c.daily.today.cancelRate||0).toFixed(1)}%</strong></div><div class="row"><span>Last Day Peak Hour</span><strong>${c.daily.today.peakHour||'—'}</strong></div></div>
-      <div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Target Summary':'ملخص التارجت'}</h3></div><div class="row"><span>Total Target</span><strong>${money(c.targetSummary.target)}</strong></div><div class="row"><span>Total Achieved</span><strong>${money(c.targetSummary.sales)}</strong></div><div class="row"><span>Achievement Rate</span><strong>${c.targetSummary.pct.toFixed(1)}%</strong></div><div class="row"><span>Remaining</span><strong>${money(c.targetSummary.remaining)}</strong></div></div><div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Monthly Comparison':'المقارنة الشهرية'}</h3></div>${monthlyCompareCard(c)}</div><div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Color Alerts':'التنبيهات بالألوان'}</h3></div>${alertsHtml(buildColorAlerts(c))}</div></div>
+
+function renderAuditTab(c){
+  const rows = Array.isArray(state.auditLog) ? state.auditLog : [];
+  const isEn = state.lang === 'en';
+  return `<div class="card">
+    <div class="section-title">
+      <div><h3 style="margin:0">${isEn ? 'Audit Log' : 'سجل الحركات'}</h3><div class="small muted">${isEn ? 'Tracks admin changes, uploads, online saves, settings updates and blocked viewer actions.' : 'يسجل رفع الملفات، الحفظ الأونلاين، تعديل الإعدادات، ومحاولات Viewer الممنوعة.'}</div></div>
+      <button class="btn btn-outline" onclick="state.auditLog=[];addAudit('Audit log cleared','Audit log was cleared',{noSave:true});saveCloudState(true);render();">${isEn ? 'Clear Log' : 'مسح السجل'}</button>
+    </div>
+    <div class="tableWrap"><table><thead><tr><th>${isEn?'Time':'الوقت'}</th><th>${isEn?'Role':'الصلاحية'}</th><th>${isEn?'Action':'الإجراء'}</th><th>${isEn?'Details':'التفاصيل'}</th><th>${isEn?'Orders':'الأوردرات'}</th></tr></thead><tbody>
+      ${rows.length ? rows.map(r=>`<tr><td>${new Date(r.time).toLocaleString(isEn?'en-GB':'ar-EG')}</td><td>${r.role||''}</td><td>${r.action||''}</td><td>${r.details||''}</td><td class="num-cell">${r.orders||0}</td></tr>`).join('') : `<tr><td colspan="5" class="muted">${isEn?'No audit records yet.':'لا توجد حركات مسجلة حتى الآن.'}</td></tr>`}
+    </tbody></table></div>
+  </div>`;
+}
+
+function renderExecutiveDashboard(c){
+  const isEn = state.lang === 'en';
+  const bestBranch = (c.branches || [])[0] || {};
+  const weakestBranch = [...(c.branches || [])].sort((a,b)=>(a.targetPct||0)-(b.targetPct||0))[0] || {};
+  const bestPlatform = (c.platforms || [])[0] || {};
+  const targetPct = Number(c.targetSummary?.pct || 0);
+  const riskBranches = (c.branches || []).filter(b => b.target && (b.targetPct||0) < 70).slice(0,5);
+  const followBranches = (c.branches || []).filter(b => b.target && (b.targetPct||0) >= 70 && (b.targetPct||0) < 90).slice(0,5);
+  const okBranches = (c.branches || []).filter(b => b.target && (b.targetPct||0) >= 100).slice(0,5);
+  const rec = riskBranches.length
+    ? (isEn ? `Immediate follow-up needed for ${riskBranches[0].name}; achievement is below 70%.` : `يوصى بمتابعة عاجلة لفرع ${riskBranches[0].name} لأن نسبة التحقيق أقل من 70%.`)
+    : targetPct >= 100
+      ? (isEn ? 'Overall target achievement is strong. Keep monitoring low-volume branches.' : 'تحقيق التارجت العام جيد. يفضل الاستمرار في متابعة الفروع الأقل حجمًا.')
+      : (isEn ? 'Overall target still needs follow-up; focus on branches below 90% achievement.' : 'التارجت العام يحتاج متابعة؛ ركّز على الفروع الأقل من 90% تحقيق.');
+  return `
+  <div class="card" style="border-color:rgba(233,30,126,.45);background:linear-gradient(135deg,rgba(233,30,126,.14),rgba(255,255,255,.04));">
+    <div class="section-title">
+      <div><h3 style="margin:0">${isEn?'Executive Dashboard':'لوحة الإدارة التنفيذية'}</h3><div class="small muted">${isEn?'Live summary based on current filters and online data.':'ملخص مباشر حسب الفلاتر الحالية والبيانات الأونلاين.'}</div></div>
+      <span class="badge ok">${isEn?'Online Sync':'مزامنة أونلاين'}</span>
+    </div>
+    <div class="grid4">
+      <div class="prep-kpi-card"><div class="k">${isEn?'Total Sales':'إجمالي المبيعات'}</div><div class="v">${money(c.sales||0)}</div><div class="s">${isEn?'filtered period':'الفترة المحددة'}</div></div>
+      <div class="prep-kpi-card"><div class="k">${isEn?'Completed Orders':'الطلبات المكتملة'}</div><div class="v">${money(c.total||0)}</div><div class="s">${isEn?'successful orders':'أوردر ناجح'}</div></div>
+      <div class="prep-kpi-card"><div class="k">${isEn?'Target Achievement':'تحقيق التارجت'}</div><div class="v">${targetPct.toFixed(1)}%</div><div class="s">${money(c.targetSummary?.sales||0)} / ${money(c.targetSummary?.target||0)}</div></div>
+      <div class="prep-kpi-card"><div class="k">${isEn?'Cancellation Rate':'نسبة الإلغاء'}</div><div class="v">${Number(c.cancelRate||0).toFixed(1)}%</div><div class="s">${isEn?'watch if high':'تحتاج متابعة لو مرتفعة'}</div></div>
+    </div>
     <div class="grid3">
-      <div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Top 5 Branches':'أفضل 5 فروع'}</h3></div>${progressList(c.branches.slice(0,5),'score','%')}</div>
-      <div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Lowest 5 Platforms':'أقل 5 منصات'}</h3></div>${progressList([...c.platforms].sort((a,b)=>(a.completed||0)-(b.completed||0)).slice(0,5),'completed',' طلب')}</div>
-      <div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Lowest 5 Drivers':'أقل 5 طيارين'}</h3></div>${progressList([...c.drivers].sort((a,b)=>(a.score||0)-(b.score||0)).slice(0,5),'score','%')}</div>
-    </div>`;
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Best Branch':'أفضل فرع'}</h3></div><div class="row"><span>${bestBranch.name||'—'}</span><strong>${money(bestBranch.sales||0)}</strong></div><div class="small muted">${isEn?'Achievement':'تحقيق'}: ${Number(bestBranch.targetPct||0).toFixed(1)}%</div></div>
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Needs Follow-up':'يحتاج متابعة'}</h3></div><div class="row"><span>${weakestBranch.name||'—'}</span><strong>${Number(weakestBranch.targetPct||0).toFixed(1)}%</strong></div><div class="small muted">${isEn?'lowest target achievement':'أقل نسبة تحقيق تارجت'}</div></div>
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Top Platform':'أفضل منصة'}</h3></div><div class="row"><span>${bestPlatform.name||'—'}</span><strong>${money(bestPlatform.sales||0)}</strong></div><div class="small muted">${isEn?'sales channel':'قناة المبيعات'}</div></div>
+    </div>
+    <div class="grid2eq">
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Branch Target Achievement':'تحقيق التارجت حسب الفروع'}</h3></div>${renderBars((c.branches||[]).filter(x=>x.target).slice(0,10).map(x=>({name:x.name,pct:Math.min(130,x.targetPct||0)})),'name','pct','%')}</div>
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Sales by Branch':'مبيعات الفروع'}</h3></div>${renderBars((c.branches||[]).slice(0,10),'name','sales')}</div>
+    </div>
+    <div class="grid3">
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Risk < 70%':'خطر أقل من 70%'}</h3></div>${progressList(riskBranches.length?riskBranches:[{name:isEn?'No risk branches':'لا توجد فروع خطر', targetPct:0}], 'targetPct','%','branches')}</div>
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Follow-up 70-90%':'متابعة 70-90%'}</h3></div>${progressList(followBranches.length?followBranches:[{name:isEn?'No branches':'لا توجد فروع', targetPct:0}], 'targetPct','%','branches')}</div>
+      <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Excellent +100%':'ممتاز +100%'}</h3></div>${progressList(okBranches.length?okBranches:[{name:isEn?'No branches yet':'لا توجد فروع بعد', targetPct:0}], 'targetPct','%','branches')}</div>
+    </div>
+    <div class="card"><div class="section-title"><h3 style="margin:0">${isEn?'Management Recommendation':'توصية إدارية'}</h3></div><div class="note">${rec}</div></div>
+  </div>
+  ${boardRankingSummaryHtml(c)}${monthlyVsPreviousHtml(c)}
+  `;
+}
+
+function renderTabContent(c){
+  if(state.activeTab==='overview') return renderExecutiveDashboard(c);
   if(state.activeTab==='daily') return dailyReportHtml(c);
   if(state.activeTab==='period') return periodAnalysisHtml(c);
   if(state.activeTab==='charts') return `<div class="grid2eq">
@@ -3402,12 +4039,14 @@ function renderTabContent(c){
     <div class="card"><div class="section-title"><h3 style="margin:0">${state.lang==='en'?'Monthly Sales':'المبيعات الشهرية'}</h3></div>${renderBars(c.monthlyOrders.slice(-12),'month','sales')}</div>
   </div>`;
   if(state.activeTab==='branchpeaks') return branchPeaksProfessionalHtml(c.data);
+  if(state.activeTab==='smart') return smartAnalysisHtml(c);
   if(state.activeTab==='branches') return `<div class="card"><div class="section-title"><h3 style="margin:0">تحليل الفروع بالتفصيل</h3></div><div class="tableWrap"><table><thead><tr><th>الفرع</th><th>الطلبات المكتملة</th><th>المبيعات</th><th>الهدف</th><th>Achievement Rate</th><th>Remaining</th><th>الحالة</th><th>متوسط الأوردر</th><th>المكتمل</th><th>غير مكتمل</th><th>نسبة الإلغاء</th><th>معدل النجاح</th><th>معدل الأداء</th><th>أفضل منطقة</th><th>أكثر عميل</th><th>أعلى ساعة</th><th>أفضل محضّر</th><th>أفضل مندوب</th></tr></thead><tbody>${c.branches.map(b=>`<tr><td>${b.name}</td><td class="num-cell">${b.orders}</td><td class="num-cell">${money(b.sales)}</td><td class="num-cell">${money(b.target||0)}</td><td class="num-cell">${(b.targetPct||0).toFixed(1)}%</td><td class="num-cell">${money(Math.max(0,(b.target||0)-(b.sales||0)))}</td><td class="num-cell">${targetStatusBadge(b.targetPct,b.target)}</td><td class="num-cell">${money(b.avgOrder)}</td><td class="num-cell">${b.completed}</td><td class="num-cell">${b.canceled}</td><td class="num-cell">${b.cancelRate.toFixed(1)}%</td><td class="num-cell">${b.successRate.toFixed(1)}%</td><td class="num-cell"><span class="badge-wrap">${b.score.toFixed(1)}% ${scoreBadge(b.score)}</span></td><td>${b.topArea||''}</td><td>${b.topCustomer||''}</td><td class="num-cell">${b.peak||''}</td><td>${b.bestPreparer||''}</td><td>${b.bestDriver||''}</td></tr>`).join('')}</tbody></table></div></div>`;
   if(state.activeTab==='drivers') return `<div class="card"><div class="section-title"><h3 style="margin:0">تحليل الطيارين / المندوبين</h3></div><div class="tableWrap"><table><thead><tr><th>الطيار</th><th>الطلبات</th><th>المكتمل</th><th>غير مكتمل</th><th>المبيعات</th><th>متوسط الأوردر</th><th>معدل النجاح</th><th>معدل الأداء</th></tr></thead><tbody>${c.drivers.map(d=>`<tr><td>${d.name}</td><td class="num-cell">${d.orders}</td><td class="num-cell">${d.completed}</td><td class="num-cell">${d.canceled}</td><td class="num-cell">${money(d.sales)}</td><td class="num-cell">${money(d.avgOrder)}</td><td class="num-cell">${d.successRate.toFixed(1)}%</td><td class="num-cell"><span class="badge-wrap">${d.score.toFixed(1)}% ${scoreBadge(d.score)}</span></td></tr>`).join('')}</tbody></table></div></div>`;
   if(state.activeTab==='platforms') return `<div class="card"><div class="section-title"><h3 style="margin:0">تحليل المنصات</h3></div><div class="tableWrap"><table><thead><tr><th>المنصة</th><th>الطلبات</th><th>المكتمل</th><th>غير مكتمل</th><th>المبيعات</th><th>متوسط الأوردر</th><th>معدل النجاح</th><th>نسبة الإلغاء</th></tr></thead><tbody>${c.platforms.map(p=>`<tr><td>${p.name}</td><td class="num-cell">${p.orders}</td><td class="num-cell">${p.completed}</td><td class="num-cell">${p.canceled}</td><td class="num-cell">${money(p.sales)}</td><td class="num-cell">${money(p.avgOrder)}</td><td class="num-cell">${p.successRate.toFixed(1)}%</td><td class="num-cell">${p.cancelRate.toFixed(1)}%</td></tr>`).join('')}</tbody></table></div></div>`;
   if(state.activeTab==='areas') return renderAreasProfessional(c);
   if(state.activeTab==='customers') return `<div class="card"><div class="section-title"><h3 style="margin:0">تحليل العملاء</h3></div><div class="tableWrap"><table><thead><tr><th>العميل</th><th>الهاتف</th><th>عدد الطلبات</th><th>إجمالي الإنفاق</th><th>متوسط الأوردر</th><th>أكثر فرع</th></tr></thead><tbody>${c.customers.slice(0,250).map(x=>`<tr><td>${x.name||''}</td><td class="num-cell">${x.phone||''}</td><td class="num-cell">${x.orders}</td><td class="num-cell">${money(x.spent)}</td><td class="num-cell">${money(x.avgOrder)}</td><td>${x.topBranch||''}</td></tr>`).join('')}</tbody></table></div></div>`;
   if(state.activeTab==='kpi') return renderKpiTab(c);
+  if(state.activeTab==='audit') return renderAuditTab(c);
   if(state.activeTab==='settings') return renderSettingsTab(c);
   return `<div class="card"><div class="section-title"><h3 style="margin:0">نظرة عامة</h3></div><div class="note">اختر تبويبًا من القائمة الجانبية لعرض التفاصيل.</div></div>`;
 }
@@ -3442,6 +4081,98 @@ function boardReportHeader(title, subtitle){
   </div>`;
 }
 
+
+function boardReportNumber(v, suffix=''){
+  const n = Number(v || 0);
+  return n.toLocaleString(brLang() === 'en' ? 'en-GB' : 'ar-EG') + (suffix || '');
+}
+
+function boardDateScopeSummary(data){
+  const dates = (data || []).map(o => String(o.orderDate || '').slice(0,10)).filter(Boolean).sort();
+  if(!dates.length) return brText('الفترة: لا توجد تواريخ في البيانات الحالية','Period: no dates in the current data');
+  const from = state.filters?.dateFrom || dates[0];
+  const to = state.filters?.dateTo || dates[dates.length - 1];
+  const dayCount = new Set(dates).size;
+  return brText(`الفترة: من <strong>${from}</strong> إلى <strong>${to}</strong> - عدد أيام البيانات: <strong>${dayCount}</strong>`, `Period: from <strong>${from}</strong> to <strong>${to}</strong> - Data days: <strong>${dayCount}</strong>`);
+}
+
+function boardWeekdayName(dateStr){
+  const d = new Date(String(dateStr || '').slice(0,10) + 'T00:00:00');
+  if(Number.isNaN(d.getTime())) return '—';
+  const ar = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const en = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return (brLang() === 'en' ? en : ar)[d.getDay()];
+}
+
+function getBoardWeekdayRows(data){
+  const map = {};
+  (data || []).forEach(o => {
+    const day = boardWeekdayName(o.orderDate);
+    if(day === '—') return;
+    if(!map[day]) map[day] = {name: day, orders:0, completed:0, canceled:0, sales:0};
+    const g = map[day];
+    g.orders++;
+    if(o.status === 'تم'){
+      g.completed++;
+      g.sales += Number(o.amount || 0);
+    } else if(o.status === 'ملغي / مرتجع') {
+      g.canceled++;
+    }
+  });
+  return Object.values(map).map(g => ({
+    ...g,
+    avgOrder: g.completed ? g.sales / g.completed : 0,
+    cancelRate: g.orders ? (g.canceled / g.orders) * 100 : 0,
+    successRate: g.orders ? (g.completed / g.orders) * 100 : 0
+  })).sort((a,b)=>(b.sales||0)-(a.sales||0) || (b.completed||0)-(a.completed||0));
+}
+
+function getBoardDailyTopRows(data){
+  const map = {};
+  (data || []).forEach(o => {
+    const d = String(o.orderDate || '').slice(0,10);
+    if(!d) return;
+    if(!map[d]) map[d] = {date:d, orders:0, completed:0, canceled:0, sales:0, branches:{}};
+    const g = map[d];
+    g.orders++;
+    if(o.branch) g.branches[o.branch] = (g.branches[o.branch] || 0) + 1;
+    if(o.status === 'تم'){
+      g.completed++;
+      g.sales += Number(o.amount || 0);
+    } else if(o.status === 'ملغي / مرتجع') {
+      g.canceled++;
+    }
+  });
+  return Object.values(map).map(g => ({
+    ...g,
+    topBranch: Object.entries(g.branches).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—',
+    cancelRate: g.orders ? (g.canceled / g.orders) * 100 : 0
+  })).sort((a,b)=>(b.sales||0)-(a.sales||0) || (b.completed||0)-(a.completed||0));
+}
+
+function reportBarsSmart(items, labelKey, valueKey, type='number', suffix=''){
+  if(!items || !items.length) return `<div class="a4-small">${brText('لا توجد بيانات','No Data')}</div>`;
+  const max = Math.max(...items.map(x=>Number(x[valueKey]||0)), 1);
+  return `<div class="a4-chart">${items.map(it=>{
+    const v = Number(it[valueKey] || 0);
+    const w = Math.max(2, (v / max) * 100);
+    const valueText = type === 'money' ? money(v) : boardReportNumber(v, suffix);
+    return `<div class="a4-chart-row"><div class="a4-chart-label">${it[labelKey]||'—'}</div><div class="a4-bar-wrap"><div class="a4-bar" style="width:${w}%"></div></div><div class="a4-chart-value">${valueText}</div></div>`;
+  }).join('')}</div>`;
+}
+
+function boardRecommendationsList({bestBranch, weakBranch, bestPlatform, bestWeekday, weakWeekday, cancelRate}){
+  const list = [];
+  if(weakBranch) list.push(brText(`عمل مراجعة تشغيلية لفرع <strong>${weakBranch.name}</strong> تشمل أسباب انخفاض الطلبات/المبيعات ومعدل الإلغاء، مع متابعة يومية لمدة أسبوعين.`, `Run an operational review for <strong>${weakBranch.name}</strong>, covering low orders/sales and cancellation drivers, with daily follow-up for two weeks.`));
+  if(bestBranch) list.push(brText(`استخدام فرع <strong>${bestBranch.name}</strong> كنموذج قياسي وتعميم أفضل الممارسات منه على الفروع الأقل أداءً.`, `Use <strong>${bestBranch.name}</strong> as the benchmark branch and replicate its best practices across weaker branches.`));
+  if(bestPlatform) list.push(brText(`زيادة التركيز التسويقي والتشغيلي على منصة <strong>${bestPlatform.name}</strong> لأنها الأكثر مساهمة في الفترة الحالية.`, `Increase commercial and operational focus on <strong>${bestPlatform.name}</strong>, currently the strongest platform.`));
+  if(bestWeekday) list.push(brText(`تجهيز العمالة والمخزون بشكل أقوى في يوم <strong>${bestWeekday.name}</strong> لأنه الأعلى في المبيعات/الطلبات.`, `Strengthen staffing and stock readiness on <strong>${bestWeekday.name}</strong>, the strongest weekday by sales/orders.`));
+  if(weakWeekday) list.push(brText(`تحليل أسباب ضعف يوم <strong>${weakWeekday.name}</strong> واقتراح عرض أو حملة صغيرة لتحريك الطلبات.`, `Analyze why <strong>${weakWeekday.name}</strong> is weaker and consider a light offer/campaign to lift demand.`));
+  if(Number(cancelRate||0) > Number(state.settings.alertThresholds.cancelRate||10)) list.push(brText(`وضع سبب إلغاء إلزامي لكل طلب ملغي، ومراجعة أعلى 10 أسباب إلغاء أسبوعيًا.`, `Make cancellation reason mandatory for every canceled order and review the top 10 reasons weekly.`));
+  if(!list.length) list.push(brText('استمرار المتابعة بنفس مستوى التحكم الحالي مع مراجعة أسبوعية للفروع والمنصات والأيام الأعلى طلبًا.', 'Maintain the current control level with weekly reviews of branches, platforms, and peak weekdays.'));
+  return list;
+}
+
 function buildBoardReportHtml(c){
   const bestBranchesSorted = [...(c.branches||[])].sort((a,b)=>(b.score||0)-(a.score||0));
   const isEn = brLang() === 'en';
@@ -3451,6 +4182,11 @@ function buildBoardReportHtml(c){
   const bestDriver = c.drivers?.[0];
   const bestPlatform = c.platforms?.[0];
   const bestPreparer = c.bestKpiPreparer || c.preparers?.[0];
+  const weekdayRows = getBoardWeekdayRows(c.data || []);
+  const dailyTopRows = getBoardDailyTopRows(c.data || []);
+  const bestWeekday = weekdayRows[0];
+  const weakWeekday = [...weekdayRows].sort((a,b)=>(a.sales||0)-(b.sales||0) || (a.completed||0)-(b.completed||0))[0];
+  const dateScopeText = boardDateScopeSummary(c.data || []);
   const months = c.monthlyOrders || [];
   const cur = months.length ? months[months.length-1] : null;
   const prev = months.length > 1 ? months[months.length-2] : null;
@@ -3499,6 +4235,11 @@ function buildBoardReportHtml(c){
   if(cur && prev && cur.completed > prev.completed) opps.push(brText(`الطلبات المكتملة في <strong>${currentMonthName}</strong> تحسنت مقارنة بالشهر السابق، وهو تطور إيجابي يمكن البناء عليه.`,`Completed orders in <strong>${currentMonthName}</strong> improved versus the prior month, providing a positive operating base to build upon.`));
   if(!opps.length) opps.push(brText('لا توجد فرصة توسع بارزة في هذه اللحظة، لكن يمكن رفع الكفاءة عبر ضبط الإلغاء وتعزيز أفضل الممارسات التشغيلية.','No standout growth opportunity is highlighted at the moment, though efficiency can still be improved through tighter cancellation control and replication of best practices.'));
 
+  const actionPlan = boardRecommendationsList({bestBranch, weakBranch, bestPlatform, bestWeekday, weakWeekday, cancelRate: c.cancelRate});
+  const weekdayTableRows = weekdayRows.map(d=>`<tr><td>${d.name}</td><td>${d.completed}</td><td>${money(d.sales)}</td><td>${money(d.avgOrder)}</td><td>${Number(d.cancelRate||0).toFixed(1)}%</td></tr>`).join('') || `<tr><td colspan="5">${brText('لا توجد بيانات','No Data')}</td></tr>`;
+  const dailyTopTableRows = dailyTopRows.slice(0,8).map(d=>`<tr><td>${d.date}</td><td>${d.completed}</td><td>${money(d.sales)}</td><td>${d.topBranch}</td><td>${Number(d.cancelRate||0).toFixed(1)}%</td></tr>`).join('') || `<tr><td colspan="5">${brText('لا توجد بيانات','No Data')}</td></tr>`;
+  const branchDeepRows = (c.branches||[]).slice(0,10).map(b=>`<tr><td>${b.name||'—'}</td><td>${b.completed||0}</td><td>${money(b.sales||0)}</td><td>${money(b.avgOrder||0)}</td><td>${Number(b.cancelRate||0).toFixed(1)}%</td><td>${b.topArea||'—'}</td><td>${b.peak||'—'}</td></tr>`).join('') || `<tr><td colspan="7">${brText('لا توجد بيانات','No Data')}</td></tr>`;
+
   const rankingRows = (c.branches||[]).slice(0,8).map(b=>`
     <tr>
       <td>${b.name||'—'}</td>
@@ -3510,8 +4251,8 @@ function buildBoardReportHtml(c){
   `).join('');
 
   const executiveNarrative = brText(
-    `يعرض هذا التقرير التنفيذي صورة مركزة لأداء شبكة سي ستور في الفترة الحالية أمام مجلس الإدارة. بلغ إجمالي المبيعات <strong>${money(c.sales||0)}</strong> من خلال <strong>${c.total||0}</strong> طلبًا مكتملًا، بمتوسط أوردر <strong>${money(c.avg||0)}</strong>. وقد سجلت الشبكة نسبة إلغاء قدرها <strong>${Number(c.cancelRate||0).toFixed(1)}%</strong>، فيما بلغت نسبة تحقيق الأهداف <strong>${Number(c.targetSummary?.pct||0).toFixed(1)}%</strong>. ويتصدر المشهد التشغيلي فرع <strong>${bestBranch?.name||'—'}</strong>، بينما يحتاج فرع <strong>${weakBranch?.name||'—'}</strong> إلى متابعة أكثر قربًا. ويبرز كذلك <strong>${bestPreparer?.name||'—'}</strong> كأفضل محضّر وفق قراءات KPI الحالية.` ,
-    `This executive report provides a concise board-level view of current network performance at C Store. Total sales reached <strong>${money(c.sales||0)}</strong> from <strong>${c.total||0}</strong> completed orders, with an average order value of <strong>${money(c.avg||0)}</strong>. The network recorded a cancellation rate of <strong>${Number(c.cancelRate||0).toFixed(1)}%</strong>, while overall target achievement reached <strong>${Number(c.targetSummary?.pct||0).toFixed(1)}%</strong>. <strong>${bestBranch?.name||'—'}</strong> is the leading branch at present, whereas <strong>${weakBranch?.name||'—'}</strong> requires closer management attention. KPI readings also identify <strong>${bestPreparer?.name||'—'}</strong> as the top preparer currently.`
+    `يعرض هذا التقرير التنفيذي صورة مركزة لأداء شبكة سي ستور في الفترة الحالية أمام مجلس الإدارة. بلغ إجمالي المبيعات <strong>${money(c.sales||0)}</strong> من خلال <strong>${c.total||0}</strong> طلبًا مكتملًا، بمتوسط أوردر <strong>${money(c.avg||0)}</strong>. وقد سجلت الشبكة نسبة إلغاء قدرها <strong>${Number(c.cancelRate||0).toFixed(1)}%</strong>، فيما بلغت نسبة تحقيق الأهداف <strong>${Number(c.targetSummary?.pct||0).toFixed(1)}%</strong>. ويتصدر المشهد التشغيلي فرع <strong>${bestBranch?.name||'—'}</strong>، بينما يحتاج فرع <strong>${weakBranch?.name||'—'}</strong> إلى متابعة أكثر قربًا. ويظهر يوم <strong>${bestWeekday?.name||'—'}</strong> كأقوى أيام الأسبوع، ويبرز <strong>${bestPreparer?.name||'—'}</strong> كأفضل محضّر وفق قراءات KPI الحالية.` ,
+    `This executive report provides a concise board-level view of current network performance at C Store. Total sales reached <strong>${money(c.sales||0)}</strong> from <strong>${c.total||0}</strong> completed orders, with an average order value of <strong>${money(c.avg||0)}</strong>. The network recorded a cancellation rate of <strong>${Number(c.cancelRate||0).toFixed(1)}%</strong>, while overall target achievement reached <strong>${Number(c.targetSummary?.pct||0).toFixed(1)}%</strong>. <strong>${bestBranch?.name||'—'}</strong> is the leading branch, <strong>${weakBranch?.name||'—'}</strong> requires closer attention, and <strong>${bestWeekday?.name||'—'}</strong> is the strongest weekday. KPI readings identify <strong>${bestPreparer?.name||'—'}</strong> as the top preparer currently.`
   );
 
   const chairmanNote = brText(
@@ -3532,6 +4273,7 @@ function buildBoardReportHtml(c){
         <div class="a4-card"><div class="label">${brText('أفضل طيار','Top Driver')}</div><div class="value">${bestDriver?.name||'—'}</div></div>
         <div class="a4-card"><div class="label">${brText('أفضل محضّر','Top Preparer')}</div><div class="value">${bestPreparer?.name||'—'}</div></div>
       </div>
+      <div class="a4-lead" style="margin-bottom:12px;padding:9px 12px;line-height:1.7">${dateScopeText}</div>
       <div class="board-grid-2 a4-section">
         <div>
           <div class="a4-section-title">${brText('الرسالة التنفيذية','Executive Narrative')}</div>
@@ -3616,6 +4358,68 @@ function buildBoardReportHtml(c){
       </div>
       <div class="a4-footer">${brText('تقرير سي ستور التنفيذي - صفحة 3','C Store Executive Report - Page 3')}</div>
     </div>
+
+    <div class="a4-page board-report ${brLang()}-report" dir="${brDir()}">
+      ${boardReportHeader(brText('تقرير الفروع وأيام الأسبوع','Branches & Weekdays Report'), brText('تحليل عملي لتوزيع الأداء حسب الفرع واليوم','Operational split by branch and weekday'))}
+      <div class="board-grid-2">
+        <div class="a4-section">
+          <div class="a4-section-title">${brText('ترتيب أيام الأسبوع','Weekday Ranking')}</div>
+          <table class="a4-table">
+            <thead><tr><th>${brText('اليوم','Day')}</th><th>${brText('الطلبات المكتملة','Completed')}</th><th>${brText('المبيعات','Sales')}</th><th>${brText('متوسط الأوردر','AOV')}</th><th>${brText('الإلغاء %','Cancel %')}</th></tr></thead>
+            <tbody>${weekdayTableRows}</tbody>
+          </table>
+        </div>
+        <div class="a4-section">
+          <div class="a4-section-title">${brText('أعلى الأيام الفعلية في البيانات','Top Actual Dates')}</div>
+          <table class="a4-table">
+            <thead><tr><th>${brText('التاريخ','Date')}</th><th>${brText('المكتمل','Completed')}</th><th>${brText('المبيعات','Sales')}</th><th>${brText('أفضل فرع','Top Branch')}</th><th>${brText('الإلغاء %','Cancel %')}</th></tr></thead>
+            <tbody>${dailyTopTableRows}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="board-grid-2">
+        <div class="a4-section">
+          <div class="a4-section-title">${brText('مبيعات أيام الأسبوع','Weekday Sales')}</div>
+          ${reportBarsSmart(weekdayRows.slice(0,7),'name','sales','money')}
+        </div>
+        <div class="a4-section">
+          <div class="a4-section-title">${brText('الطلبات المكتملة حسب اليوم','Completed Orders by Weekday')}</div>
+          ${reportBarsSmart(weekdayRows.slice(0,7),'name','completed','number')}
+        </div>
+      </div>
+      <div class="a4-footer">${brText('تقرير سي ستور التنفيذي - صفحة 4','C Store Executive Report - Page 4')}</div>
+    </div>
+
+    <div class="a4-page board-report ${brLang()}-report" dir="${brDir()}">
+      ${boardReportHeader(brText('تقرير الفروع التفصيلي وخطة العمل','Branch Detail & Action Plan'), brText('ملاحظات تنفيذية قابلة للمتابعة','Actionable management follow-up'))}
+      <div class="a4-section">
+        <div class="a4-section-title">${brText('تفاصيل الفروع المختصرة','Branch Detail Snapshot')}</div>
+        <table class="a4-table">
+          <thead><tr><th>${brText('الفرع','Branch')}</th><th>${brText('المكتمل','Completed')}</th><th>${brText('المبيعات','Sales')}</th><th>${brText('متوسط الأوردر','AOV')}</th><th>${brText('الإلغاء %','Cancel %')}</th><th>${brText('أفضل منطقة','Top Area')}</th><th>${brText('أعلى ساعة','Peak Hour')}</th></tr></thead>
+          <tbody>${branchDeepRows}</tbody>
+        </table>
+      </div>
+      <div class="board-grid-2 a4-section">
+        <div>
+          <div class="a4-section-title">${brText('خطة متابعة الإدارة','Management Action Plan')}</div>
+          <ul class="board-bullets">${actionPlan.map(x=>`<li>${x}</li>`).join('')}</ul>
+        </div>
+        <div>
+          <div class="a4-section-title">${brText('مؤشرات يجب مراجعتها أسبوعيًا','Weekly Control Checklist')}</div>
+          <ul class="board-bullets">
+            <li>${brText('نسبة الإلغاء حسب الفرع والمنصة وسبب الإلغاء.','Cancellation rate by branch, platform, and reason.')}</li>
+            <li>${brText('أيام الذروة مقابل جاهزية العمالة والمخزون.','Peak weekdays versus staffing and stock readiness.')}</li>
+            <li>${brText('الفروع الأقل تحقيقًا للتارجت وخطة التحسين لكل فرع.','Branches below target and the recovery plan for each.')}</li>
+            <li>${brText('أفضل الممارسات في الفرع الأعلى أداءً وتعميمها.','Best practices from the leading branch and replication plan.')}</li>
+          </ul>
+        </div>
+      </div>
+      <div class="a4-section">
+        <div class="a4-section-title">${brText('قرار إداري مقترح','Suggested Management Decision')}</div>
+        <div class="a4-lead">${brText(`يُوصى بالعمل على محورين: الأول هو حماية الأداء القوي في <strong>${bestBranch?.name||'الفرع الأفضل'}</strong>، والثاني هو خطة تصحيح واضحة لفرع <strong>${weakBranch?.name||'الفرع الأقل أداءً'}</strong>. ويجب ربط الخطة بتقرير أسبوعي مختصر يوضح المبيعات، الطلبات، الإلغاء، وأيام الذروة.` , `Recommended approach: protect strong performance at <strong>${bestBranch?.name||'the leading branch'}</strong> while launching a focused recovery plan for <strong>${weakBranch?.name||'the lowest-performing branch'}</strong>. The plan should be tracked weekly with sales, orders, cancellations, and peak weekday indicators.`)}</div>
+      </div>
+      <div class="a4-footer">${brText('تقرير سي ستور التنفيذي - صفحة 5','C Store Executive Report - Page 5')}</div>
+    </div>
   `;
 }
 
@@ -3681,7 +4485,30 @@ function openBoardReportPrint(){
   const w = window.open('', '_blank');
   if(!w) return;
   w.document.open();
-  w.document.write(`<!DOCTYPE html><html lang="${brLang()}" dir="${brDir()}"><head><meta charset="UTF-8"><title>${brText('تقرير مجلس الإدارة - سي ستور','C Store Board Report')}</title>${styles}</head><body>${reportHtml}</body></html>`);
+  w.document.write(`<!DOCTYPE html><html lang="${brLang()}" dir="${brDir()}"><head><meta charset="UTF-8"><title>${brText('تقرير مجلس الإدارة - سي ستور','C Store Board Report')}</title>${styles}
+<!-- PWA settings -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2b1035">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="C Store Dashboard">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+</head><body>${reportHtml}
+<script>
+(function(){
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(err){
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+})();
+<\/script>
+
+</body></html>`);
   w.document.close();
   setTimeout(()=>{
     w.focus();
@@ -3718,7 +4545,30 @@ function downloadReport(){
 .alert-title{font-weight:700;margin-bottom:6px}
 
 </style>`;
-  const doc = `<!DOCTYPE html><html lang="${brLang()}" dir="${brDir()}"><head><meta charset="UTF-8"><title>${brText('تقرير سي ستور','C Store Report')}</title>${styles}</head><body>${reportHtml}</body></html>`;
+  const doc = `<!DOCTYPE html><html lang="${brLang()}" dir="${brDir()}"><head><meta charset="UTF-8"><title>${brText('تقرير سي ستور','C Store Report')}</title>${styles}
+<!-- PWA settings -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2b1035">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="C Store Dashboard">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+</head><body>${reportHtml}
+<script>
+(function(){
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(err){
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+})();
+<\/script>
+
+</body></html>`;
   const blob = new Blob([doc], {type:'text/html;charset=utf-8'});
   const a = document.createElement('a');
   const d = new Date();
@@ -3811,6 +4661,9 @@ function exportReportExcel(){
     ['الملغي / المرتجع', c.badCount],
     ['نسبة الإلغاء %', Number((c.cancelRate||0).toFixed(2))],
     ['أعلى ساعة ضغط', c.peakHour || '—'],
+    ['عدد المناطق', (c.areas||[]).length],
+    ['أعلى منطقة', c.areas[0]?.name || '—'],
+    ['طلبات أعلى منطقة', c.areas[0]?.orders || 0],
     ['معدل الأداء العام', c.total>0 ? Number((((100-c.cancelRate)*0.6 + Math.min(100,c.total/100)*0.4).toFixed(2))) : '—']
   ];
 
@@ -3819,8 +4672,29 @@ function exportReportExcel(){
     ['أفضل محضّر', c.preparers[0]?.name||'—', c.preparers[0]?.completed||0],
     ['أفضل طيار', c.drivers[0]?.name||'—', c.drivers[0]?.completed||0],
     ['أفضل عميل', c.topCustomer?.name||'—', c.topCustomer?.orders||0],
-    ['أفضل منصة', c.platforms[0]?.name||'—', c.platforms[0]?.orders||0]
+    ['أفضل منصة', c.platforms[0]?.name||'—', c.platforms[0]?.orders||0],
+    ['أعلى منطقة', c.areas[0]?.name||'—', c.areas[0]?.orders||0]
   ];
+
+  const areaBranchMap = {};
+  (c.data||[]).forEach(o=>{
+    const area = o.area || 'غير محدد';
+    const branch = branchForCalc(o) || o.branch || 'غير محدد';
+    if(!areaBranchMap[area]) areaBranchMap[area] = {};
+    areaBranchMap[area][branch] = (areaBranchMap[area][branch] || 0) + 1;
+  });
+  const topBranchForArea = (area)=>{
+    const m = areaBranchMap[area] || {};
+    const row = Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
+    return row ? row[0] : '';
+  };
+
+  const areas = [['المنطقة','الطلبات','المكتمل','غير مكتمل','المبيعات','متوسط الأوردر','نسبة الإلغاء %','معدل النجاح %','أكثر فرع طلبات']]
+    .concat((c.areas||[]).map(a=>[
+      a.name||'غير محدد', a.orders||0, a.completed||0, a.canceled||0, Number(a.sales||0), Number(a.avgOrder||0),
+      Number((a.cancelRate||0).toFixed(2)), a.orders ? Number((((a.completed||0)/(a.orders||1))*100).toFixed(2)) : 0,
+      topBranchForArea(a.name||'غير محدد')
+    ]));
 
   const branches = [['الفرع','Band','الطلبات','المبيعات','الهدف','Achievement Rate %','متوسط الأوردر','المكتمل','غير مكتمل','نسبة الإلغاء %','معدل النجاح %','معدل الأداء %','أفضل منطقة','أكثر عميل','أعلى ساعة','أفضل محضّر','أفضل مندوب']]
     .concat(c.branches.map(b=>[
@@ -3875,6 +4749,7 @@ function exportReportExcel(){
   addSheet('Preparers', preparers);
   addSheet('Drivers', drivers);
   addSheet('Platforms', platforms);
+  addSheet('Areas', areas);
   addSheet('Customers', customers);
   addSheet('Monthly', monthly);
   addSheet('Orders', orders);
@@ -4003,8 +4878,10 @@ function executiveSummaryHtml(c){
 
 function render(){
   if(state.activeTab==='manager' || state.activeTab==='insights' || state.activeTab==='rankings' || state.activeTab==='payments' || state.activeTab==='preparers') state.activeTab='overview';
-  const c=calc(), years=[...new Set(state.orders.map(o=>ymd(o.orderDate).y))].sort((a,b)=>a-b), months=[...new Set(state.orders.map(o=>ymd(o.orderDate).m))].sort((a,b)=>a-b).map(m=>({value:m,label:monthNameLocal(m)})), days=[...new Set(state.orders.map(o=>ymd(o.orderDate).day))].filter(x=>!Number.isNaN(x)).sort((a,b)=>a-b);
-  document.getElementById("filters").innerHTML=renderMultiSelect(tr("السنة"),years,"years")+renderMultiSelect(tr("الشهر"),months,"months")+renderMultiSelect(tr("اليوم"),days,"days")+renderMultiSelect(tr("الفرع"),[...new Set(state.orders.map(o=>o.branch).filter(Boolean))].sort(),"branches")+renderMultiSelect(tr("المنطقة"),[...new Set(state.orders.map(o=>o.area).filter(Boolean))].sort(),"areas")+renderMultiSelect(tr("الحالة"),[...new Set(state.orders.map(o=>o.status).filter(Boolean))].sort().map(x=>({value:x,label:statusLocal(x)})),"statuses")+renderMultiSelect(tr("المحضّر"),[...new Set(state.orders.map(o=>o.preparer).filter(Boolean))].sort(),"preparers")+renderMultiSelect(tr("الطيار"),[...new Set(state.orders.map(o=>o.driver).filter(Boolean))].sort(),"drivers")+renderMultiSelect(tr("المنصة"),[...new Set(state.orders.map(o=>o.platform).filter(Boolean))].sort(),"platforms")+renderMultiSelect(tr("الدفع"),[...new Set(state.orders.map(o=>o.paymentMethod).filter(Boolean))].sort(),"payments");
+  if(!state.filters) state.filters = defaultFilters();
+  state.filters = {...defaultFilters(), ...state.filters};
+  const c=calc(), years=[...new Set(state.orders.map(o=>ymd(o.orderDate).y))].sort((a,b)=>a-b), months=[...new Set(state.orders.map(o=>ymd(o.orderDate).m))].sort((a,b)=>a-b).map(m=>({value:m,label:monthNameLocal(m)})), availableDates=getAvailableDatesForRange();
+  document.getElementById("filters").innerHTML=renderMultiSelect(tr("السنة"),years,"years")+renderMultiSelect(tr("الشهر"),months,"months")+renderDateRangeFilter(availableDates)+renderMultiSelect(tr("الفرع"),[...new Set((state.orders||[]).map(o=>branchForCalc(o)).filter(Boolean))].sort(),"branches")+renderMultiSelect(tr("المنطقة"),[...new Set(state.orders.map(o=>o.area).filter(Boolean))].sort(),"areas")+renderMultiSelect(tr("الحالة"),[...new Set(state.orders.map(o=>o.status).filter(Boolean))].sort().map(x=>({value:x,label:statusLocal(x)})),"statuses")+renderMultiSelect(tr("المحضّر"),[...new Set(state.orders.map(o=>o.preparer).filter(Boolean))].sort(),"preparers")+renderMultiSelect(tr("الطيار"),[...new Set(state.orders.map(o=>o.driver).filter(Boolean))].sort(),"drivers")+renderMultiSelect(tr("المنصة"),[...new Set(state.orders.map(o=>o.platform).filter(Boolean))].sort(),"platforms")+renderMultiSelect(tr("الدفع"),[...new Set(state.orders.map(o=>o.paymentMethod).filter(Boolean))].sort(),"payments");
   applyRoleUI();
   const overallPerf = c.total>0 ? ((100-c.cancelRate)*0.6 + Math.min(100,c.total/100)*0.4).toFixed(1) : '—';
   document.getElementById("viewerHeader").innerHTML = isViewer() ? viewerHeaderHtml(c) : "";
@@ -4025,7 +4902,7 @@ document.getElementById("search").oninput=(e)=>{state.search=e.target.value; ren
 document.getElementById("toggleOrdersBtn").onclick=()=>{state.showOrders=!state.showOrders; render()};
 document.getElementById("themeBtn").onclick=()=>{document.body.classList.toggle('light'); document.getElementById('themeBtn').textContent=document.body.classList.contains('light')?'Dark Mode':'Light Mode'};
 document.getElementById("clearDataBtn").onclick=clearAllData;
-document.getElementById("resetFiltersBtn").onclick=()=>{state.filters={years:[], months:[], days:[], branches:[], statuses:[], preparers:[], drivers:[], areas:[], platforms:[], payments:[]}; state.search=''; document.getElementById('search').value=''; render()};
+document.getElementById("resetFiltersBtn").onclick=()=>{state.filters=defaultFilters(); state.search=''; document.getElementById('search').value=''; render()};
 
 function requiredExcelColumns(){
   return ["مرجع الطلب","تاريخ الطلب","المستودع","علامات التصنيف","الإجمالي","حالة الفاتورة"];
@@ -4097,6 +4974,7 @@ async function parseExcelFiles(files){
   return {parsed, infoLines, hadMissingOptional};
 }
 async function handleExcelUpload(mode){
+  if(!requireAdminAction('Excel upload')) return;
   const files = Array.from(document.getElementById('excelInput').files || []);
   if(!files.length){
     document.getElementById('msg').textContent='اختر ملف Excel واحد على الأقل';
@@ -4151,6 +5029,7 @@ async function handleExcelUpload(mode){
       ? 'تم استبدال البيانات الحالية بنجاح: ' + finalCount + ' سجل'
       : 'تمت إضافة ودمج الملفات بنجاح: ' + finalCount + ' سجل';
 
+    addAudit(mode === 'replace' ? 'Replace Excel data' : 'Add & Merge Excel', 'Files: ' + fileNames + ' | Final records: ' + finalCount, {noSave:true});
     await saveCloudState(true);
     render();
   }catch(err){
@@ -4180,6 +5059,7 @@ async function attemptLogin(){
     return;
   }
   state.sessionRole = selectedRole;
+  addAudit('Login', selectedRole + ' logged in', {noSave:true});
   if(!isAdmin()){ state.activeTab = 'overview'; }
   document.getElementById('loginMsg').textContent = '';
   document.getElementById('loginView').classList.add('hidden');
@@ -4192,5 +5072,18 @@ document.getElementById('loginPass').addEventListener('keydown', function(e){ if
 
 loadCloudState(false).then(()=>{ render(); }).catch(()=>{ render(); });
 </script>
+
+<script>
+(function(){
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(err){
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+})();
+</script>
+
 </body>
 </html>
